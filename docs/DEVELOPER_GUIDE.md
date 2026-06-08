@@ -73,7 +73,8 @@ The application is structured in layers from hardware to UI:
 - `EPROM_TYPES`: Dict mapping chip names to specs
 
 **`utils.py`**: Utility functions
-- `hex_dump()`: Format bytes as hex/ASCII display
+- `hex_dump()`: Format bytes as hex/ASCII display (with address column)
+- `parse_hex_dump()`: Inverse of hex_dump — parse hex dump text back to bytes
 
 ## Development Setup
 

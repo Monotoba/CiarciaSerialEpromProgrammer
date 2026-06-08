@@ -107,7 +107,7 @@ The application window has five main sections:
   - Example: `1000` means operations start at address 0x1000
   - Prefix with `$` optional: `$1000` is same as `1000`
 
-### 2. File Operations (Buttons)
+### 2. File and Buffer Operations (Buttons)
 
 - **Load Binary**: Open a file and load its contents into the buffer
   - Buffer is pre-filled with 0xFF (EPROM default state)
@@ -118,6 +118,15 @@ The application window has five main sections:
   - Use before programming to erase working buffer
 - **Refresh Dump**: Update hex view from current buffer
   - Automatically refreshed after load/fill, but can be manual
+- **Edit Buffer**: Toggle edit mode to modify individual bytes directly
+  - Click to enter edit mode (hex view turns light yellow, background highlight)
+  - Modify hex values directly in the hex dump (2-character hex pairs like `FF`, `AA`, etc.)
+  - Destructive operations (Read, Program, Blank Check, Verify, Load, Fill) are disabled during edit mode
+  - **Apply Edits**: Click to validate and apply changes to the buffer
+    - Size must match EPROM capacity
+    - Hex values must be valid (00-FF)
+  - **Cancel Edit**: Click to discard changes and return to view mode
+    - Buffer remains unchanged
 
 ### 3. Operations (Buttons)
 
@@ -200,6 +209,38 @@ Before programming a used EPROM:
 1. Click **Blank Check**
 2. Progress bar runs through entire EPROM
 3. Log shows "Blank check OK." if all 0xFF, or lists non-blank addresses
+
+### Editing the Buffer Directly
+
+To modify individual bytes in the buffer without reloading a file:
+
+1. Click **Edit Buffer** button
+   - Hex view background turns light yellow
+   - "Edit Buffer" button changes to "Apply Edits"
+   - "Cancel Edit" button appears
+   - All operation buttons are disabled (grayed out)
+
+2. Edit the hex values directly:
+   - Click in the hex dump area to edit
+   - Modify 2-character hex pairs (e.g., change `FF` to `AA`)
+   - Example: `0000: FF FF FF FF` → `0000: AA BB CC DD`
+   - Do NOT edit the address column (left side) or ASCII column (right side)
+
+3. When finished editing:
+   - Click **Apply Edits** to validate and save changes to buffer
+     - Checks that hex values are valid (00-FF)
+     - Checks that edited buffer size matches EPROM capacity
+     - Shows error dialog if validation fails
+   - OR click **Cancel Edit** to discard changes
+     - Restores the original hex dump
+     - Buffer remains unchanged
+
+4. After applying edits:
+   - Hex view returns to normal (white background)
+   - "Apply Edits" button changes back to "Edit Buffer"
+   - "Cancel Edit" button disappears
+   - All operation buttons are re-enabled
+   - Proceed to **Program EPROM** to write changes to hardware
 
 ## Troubleshooting
 
