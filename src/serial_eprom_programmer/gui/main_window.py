@@ -15,9 +15,9 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QMessageBox,
-    QPushButton,
     QPlainTextEdit,
     QProgressBar,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -25,10 +25,10 @@ from PySide6.QtWidgets import (
 from serial_eprom_programmer.config import AppSettings
 from serial_eprom_programmer.devices import EPROM_TYPES
 from serial_eprom_programmer.fileformats import FileFormatError, load_file, save_file
-from serial_eprom_programmer.utils import hex_dump, parse_hex_dump
-from serial_eprom_programmer.worker import Worker
 from serial_eprom_programmer.gui.help_dialog import HelpDialog
 from serial_eprom_programmer.gui.theme_manager import ThemeManager
+from serial_eprom_programmer.utils import hex_dump, parse_hex_dump
+from serial_eprom_programmer.worker import Worker
 
 
 class MainWindow(QMainWindow):
@@ -72,7 +72,11 @@ class MainWindow(QMainWindow):
         config = QGroupBox("Connection / EPROM")
         grid = QGridLayout(config)
 
-        self.baud_combo.addItems(["150", "300", "600", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200", "230400"])
+        baud_rates = [
+            "150", "300", "600", "1200", "2400", "4800", "9600", "19200",
+            "38400", "57600", "115200", "230400",
+        ]
+        self.baud_combo.addItems(baud_rates)
         self.baud_combo.setCurrentText("9600")
 
         self.eprom_combo.addItems(EPROM_TYPES.keys())
@@ -214,7 +218,8 @@ class MainWindow(QMainWindow):
     def load_binary(self) -> None:
         """Load file (auto-detect format) into buffer."""
         file_filter = (
-            "All Supported (*.bin *.hex *.ihx *.mot *.srec *.s19 *.s28 *.sx *.ahex *.mos *.papertape *.rom *.epr);;"
+            "All Supported (*.bin *.hex *.ihx *.mot *.srec *.s19 *.s28 "
+            "*.sx *.ahex *.mos *.papertape *.rom *.epr);;"
             "Intel HEX (*.hex *.ihx);;"
             "Motorola S-Record (*.mot *.srec *.s19 *.s28 *.sx);;"
             "Addressed Hex Dump (*.ahex *.asc);;"
@@ -245,7 +250,8 @@ class MainWindow(QMainWindow):
     def save_binary(self) -> None:
         """Save buffer to file (auto-detect format by extension)."""
         file_filter = (
-            "All Supported (*.bin *.hex *.ihx *.mot *.srec *.s19 *.s28 *.sx *.ahex *.mos *.papertape *.rom *.epr);;"
+            "All Supported (*.bin *.hex *.ihx *.mot *.srec *.s19 *.s28 "
+            "*.sx *.ahex *.mos *.papertape *.rom *.epr);;"
             "Intel HEX (*.hex *.ihx);;"
             "Motorola S-Record (*.mot *.srec *.s19 *.s28 *.sx);;"
             "Addressed Hex Dump (*.ahex *.asc);;"
@@ -435,7 +441,6 @@ class MainWindow(QMainWindow):
         self._edit_mode = True
         self.hex_view.setReadOnly(False)
         # Use palette-aware colors that work in dark mode
-        from PySide6.QtGui import QColor
         palette = self.hex_view.palette()
         # Get base color and make it slightly tinted for visibility
         base_color = palette.base().color()

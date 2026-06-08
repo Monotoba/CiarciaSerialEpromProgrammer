@@ -271,7 +271,12 @@ class IntelIHex32Format(FileFormat):
             # Emit data record
             lower_addr = addr & 0xFFFF
             record_type = 0x00
-            payload = bytearray([byte_count, (lower_addr >> 8) & 0xFF, lower_addr & 0xFF, record_type])
+            payload = bytearray([
+                byte_count,
+                (lower_addr >> 8) & 0xFF,
+                lower_addr & 0xFF,
+                record_type,
+            ])
             payload.extend(chunk)
 
             checksum = (sum(payload) & 0xFF)
@@ -374,7 +379,10 @@ class TektronixHexFormat(FileFormat):
 
 
 class TiTxtFormat(FileFormat):
-    """Texas Instruments TXT format (.txt). Format: @AAAA or @ AAAA sets address, then data bytes."""
+    """Texas Instruments TXT format (.txt).
+
+    Format: @AAAA or @ AAAA sets address, then data bytes.
+    """
 
     extensions = {".txt", ".ti_txt"}
     name = "TI-TXT"
@@ -406,7 +414,8 @@ class TiTxtFormat(FileFormat):
                     hex_values = line.split()
                     for hex_byte in hex_values:
                         if len(hex_byte) != 2:
-                            raise FileFormatError(f"Line {lineno}: invalid hex byte format (need 2 chars)")
+                            msg = f"Line {lineno}: invalid hex byte (need 2 chars)"
+                            raise FileFormatError(msg)
                         byte_val = int(hex_byte, 16)
                         if current_addr >= buf_size:
                             raise FileFormatError(
@@ -698,7 +707,10 @@ class MosTapeFormat(FileFormat):
 
 
 class MifFormat(FileFormat):
-    """MIF (Memory Initialization File) format (.mif). Used for FPGA and block RAM initialization."""
+    """MIF (Memory Initialization File) format (.mif).
+
+    Used for FPGA and block RAM initialization.
+    """
 
     extensions = {".mif"}
     name = "MIF"
@@ -809,8 +821,11 @@ def detect_format(path: Path) -> FileFormat:
         if suffix in fmt.extensions:
             return fmt
 
+    supported = ", ".join(
+        e for fmt in ALL_FORMATS for e in sorted(fmt.extensions)
+    )
     raise FileFormatError(
-        f"Unknown file format: {suffix}. Supported: {', '.join(e for fmt in ALL_FORMATS for e in sorted(fmt.extensions))}"
+        f"Unknown file format: {suffix}. Supported: {supported}"
     )
 
 

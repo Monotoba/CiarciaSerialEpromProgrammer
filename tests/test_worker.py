@@ -2,9 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-from PySide6.QtCore import Qt
-
 from serial_eprom_programmer.worker import Worker
 
 

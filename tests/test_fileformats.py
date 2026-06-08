@@ -1,6 +1,5 @@
 """Tests for file format loaders and savers."""
 
-from pathlib import Path
 
 import pytest
 

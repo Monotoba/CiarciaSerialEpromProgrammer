@@ -1,9 +1,8 @@
 """Theme management for dark/light/system modes."""
 
 from typing import Literal
-from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QColor
 
+from PySide6.QtWidgets import QApplication
 
 ThemeMode = Literal["dark", "light", "system"]
 

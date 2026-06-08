@@ -16,7 +16,6 @@ from dataclasses import dataclass
 
 import serial
 import serial.tools.list_ports
-
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 from PySide6.QtWidgets import (
     QApplication,
@@ -29,10 +28,9 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QMessageBox,
-    QPushButton,
     QPlainTextEdit,
     QProgressBar,
-    QSpinBox,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )

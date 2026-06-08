@@ -23,7 +23,7 @@ class TestSerialEpromProgrammer:
         """Test that programmer is initialized with correct serial config."""
         mock_serial = MagicMock()
         mock_serial_class.return_value = mock_serial
-        prog = SerialEpromProgrammer("/dev/ttyUSB0", 9600)
+        SerialEpromProgrammer("/dev/ttyUSB0", 9600)
 
         call_kwargs = mock_serial_class.call_args[1]
         assert call_kwargs["port"] == "/dev/ttyUSB0"
