@@ -188,3 +188,130 @@ class TestMainWindow:
         window.cleanup_worker()
         assert window.thread is None
         assert window.worker is None
+
+    def test_enter_edit_mode(self, qtbot):
+        """Test entering edit mode."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.show()
+
+        assert not window._edit_mode
+        assert window.edit_btn.text() == "Edit Buffer"
+
+        window._enter_edit_mode()
+
+        assert window._edit_mode
+        assert window.edit_btn.text() == "Apply Edits"
+        assert window.cancel_btn.isVisible()
+        assert not window.hex_view.isReadOnly()
+
+    def test_exit_edit_mode(self, qtbot):
+        """Test exiting edit mode."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+
+        window._enter_edit_mode()
+        window._exit_edit_mode()
+
+        assert not window._edit_mode
+        assert window.edit_btn.text() == "Edit Buffer"
+        assert not window.cancel_btn.isVisible()
+        assert window.hex_view.isReadOnly()
+
+    def test_cancel_edit_restores_text(self, qtbot):
+        """Test that cancel restores original hex dump."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+
+        original_text = window.hex_view.toPlainText()
+        window._enter_edit_mode()
+
+        # Change text (simulate user edits)
+        window.hex_view.setPlainText("some garbage")
+
+        window._cancel_edit()
+
+        # Text restored
+        assert window.hex_view.toPlainText() == original_text
+        assert not window._edit_mode
+
+    def test_apply_edits_updates_buffer(self, qtbot):
+        """Test that applying valid edits updates buffer."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+
+        # Set specific values in the dumped hex
+        window.buffer[0] = 0xFF
+        window.buffer[1] = 0xFF
+        window.update_hex_view()
+
+        window._enter_edit_mode()
+
+        # Get the hex dump, modify first byte
+        text = window.hex_view.toPlainText()
+        lines = text.split('\n')
+        # Replace FF FF ... with AA BB ... in first line
+        modified = lines[0].replace("FF FF", "AA BB", 1)
+        lines[0] = modified
+        window.hex_view.setPlainText('\n'.join(lines))
+
+        # Apply changes
+        window._apply_edits()
+
+        # Buffer updated
+        assert window.buffer[0] == 0xAA
+        assert window.buffer[1] == 0xBB
+        assert not window._edit_mode
+
+    def test_apply_edits_invalid_shows_warning(self, qtbot):
+        """Test that invalid edits show warning dialog."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+
+        window._enter_edit_mode()
+        window.hex_view.setPlainText("garbage that is not hex format")
+
+        with patch("serial_eprom_programmer.gui.main_window.QMessageBox.warning"):
+            window._apply_edits()
+
+        # Should still be in edit mode after invalid input
+        assert window._edit_mode
+
+    def test_apply_edits_size_mismatch_warning(self, qtbot):
+        """Test warning when edited buffer size doesn't match."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+
+        window._enter_edit_mode()
+
+        # Delete a line from the hex dump (reduces size)
+        text = window.hex_view.toPlainText()
+        lines = text.split('\n')
+        window.hex_view.setPlainText('\n'.join(lines[:-1]))
+
+        with patch("serial_eprom_programmer.gui.main_window.QMessageBox.warning"):
+            window._apply_edits()
+
+        # Should still be in edit mode after size mismatch
+        assert window._edit_mode
+
+    def test_edit_mode_disables_buttons(self, qtbot):
+        """Test that buttons are disabled during edit mode."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+
+        # All buttons start enabled
+        for widget in window._edit_lockout_widgets:
+            assert widget.isEnabled()
+
+        window._enter_edit_mode()
+
+        # All lockout widgets are disabled
+        for widget in window._edit_lockout_widgets:
+            assert not widget.isEnabled()
+
+        window._exit_edit_mode()
+
+        # All buttons re-enabled
+        for widget in window._edit_lockout_widgets:
+            assert widget.isEnabled()

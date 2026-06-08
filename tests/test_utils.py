@@ -1,6 +1,6 @@
 """Tests for utility functions."""
 
-from serial_eprom_programmer.utils import hex_dump
+from serial_eprom_programmer.utils import hex_dump, parse_hex_dump
 
 
 class TestHexDump:
@@ -73,3 +73,94 @@ class TestHexDump:
         data = bytes([0xFF, 0xFE])
         result = hex_dump(data, base=0xFFFF)
         assert "FFFF:" in result
+
+
+class TestParseHexDump:
+    """Test parse_hex_dump function."""
+
+    def test_parse_hex_dump_roundtrip(self):
+        """Test that hex_dump then parse_hex_dump returns original bytes."""
+        original = bytes([0x00, 0x01, 0x02, 0xFF, 0xFE])
+        dumped = hex_dump(original)
+        parsed = parse_hex_dump(dumped)
+        assert parsed == original
+
+    def test_parse_hex_dump_with_offset(self):
+        """Test that base address doesn't affect parsed bytes."""
+        data = bytes([0xAA, 0xBB, 0xCC])
+        dumped_0 = hex_dump(data, base=0x0000)
+        dumped_1000 = hex_dump(data, base=0x1000)
+
+        parsed_0 = parse_hex_dump(dumped_0)
+        parsed_1000 = parse_hex_dump(dumped_1000)
+
+        assert parsed_0 == parsed_1000 == data
+
+    def test_parse_hex_dump_empty(self):
+        """Test parsing empty hex dump."""
+        result = parse_hex_dump("")
+        assert result == b""
+
+    def test_parse_hex_dump_single_line(self):
+        """Test parsing single line hex dump."""
+        dumped = "0000: AA BB CC DD  ....".rstrip()
+        result = parse_hex_dump(dumped)
+        assert result == bytes([0xAA, 0xBB, 0xCC, 0xDD])
+
+    def test_parse_hex_dump_multiple_lines(self):
+        """Test parsing multi-line hex dump."""
+        data = bytes(range(32))
+        dumped = hex_dump(data)
+        parsed = parse_hex_dump(dumped)
+        assert parsed == data
+
+    def test_parse_hex_dump_invalid_token_too_long(self):
+        """Test error on token with more than 2 chars."""
+        invalid = "0000: AAA BBB  ......".rstrip()
+        try:
+            parse_hex_dump(invalid)
+            assert False, "Should have raised ValueError"
+        except ValueError as exc:
+            assert "bad byte token" in str(exc).lower()
+
+    def test_parse_hex_dump_invalid_token_too_short(self):
+        """Test error on single-char token."""
+        invalid = "0000: A B C D  ....".rstrip()
+        try:
+            parse_hex_dump(invalid)
+            assert False, "Should have raised ValueError"
+        except ValueError as exc:
+            assert "bad byte token" in str(exc).lower()
+
+    def test_parse_hex_dump_missing_separator(self):
+        """Test error on line without colon separator."""
+        invalid = "0000 AA BB CC DD  ....".rstrip()
+        try:
+            parse_hex_dump(invalid)
+            assert False, "Should have raised ValueError"
+        except ValueError as exc:
+            assert "separator" in str(exc).lower()
+
+    def test_parse_hex_dump_invalid_hex_value(self):
+        """Test error on invalid hex digit."""
+        invalid = "0000: ZZ 01 02 03  ....".rstrip()
+        try:
+            parse_hex_dump(invalid)
+            assert False, "Should have raised ValueError"
+        except ValueError:
+            pass  # Expected
+
+    def test_parse_hex_dump_whitespace_handling(self):
+        """Test that standard whitespace is handled correctly."""
+        # Standard spacing from hex_dump output
+        dumped = "0000: AA BB CC DD  ....".rstrip()
+        result = parse_hex_dump(dumped)
+        assert result == bytes([0xAA, 0xBB, 0xCC, 0xDD])
+
+    def test_parse_hex_dump_large_data(self):
+        """Test round-trip with 2KB buffer (typical EPROM size)."""
+        data = bytes([0xFF] * 2048)
+        dumped = hex_dump(data)
+        parsed = parse_hex_dump(dumped)
+        assert parsed == data
+        assert len(parsed) == 2048

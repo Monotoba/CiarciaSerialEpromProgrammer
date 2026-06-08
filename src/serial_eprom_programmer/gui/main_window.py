@@ -4,6 +4,7 @@ import pathlib
 
 import serial.tools.list_ports
 from PySide6.QtCore import QThread
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -22,7 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from serial_eprom_programmer.devices import EPROM_TYPES
-from serial_eprom_programmer.utils import hex_dump
+from serial_eprom_programmer.utils import hex_dump, parse_hex_dump
 from serial_eprom_programmer.worker import Worker
 
 
@@ -48,6 +49,10 @@ class MainWindow(QMainWindow):
         self.progress = QProgressBar()
         self.hex_view = QPlainTextEdit()
         self.log_view = QPlainTextEdit()
+
+        self._edit_mode = False
+        self._pre_edit_text: str = ""
+        self._edit_lockout_widgets: list = []
 
         self._build_ui()
         self.refresh_ports()
@@ -91,16 +96,23 @@ class MainWindow(QMainWindow):
         save_btn = QPushButton("Save Binary")
         fill_btn = QPushButton("Fill FF")
         dump_btn = QPushButton("Refresh Dump")
+        self.edit_btn = QPushButton("Edit Buffer")
+        self.cancel_btn = QPushButton("Cancel Edit")
 
         load_btn.clicked.connect(self.load_binary)
         save_btn.clicked.connect(self.save_binary)
         fill_btn.clicked.connect(self.fill_ff)
         dump_btn.clicked.connect(self.update_hex_view)
+        self.edit_btn.clicked.connect(self.toggle_edit_mode)
+        self.cancel_btn.clicked.connect(self._cancel_edit)
+        self.cancel_btn.setVisible(False)
 
         file_row.addWidget(load_btn)
         file_row.addWidget(save_btn)
         file_row.addWidget(fill_btn)
         file_row.addWidget(dump_btn)
+        file_row.addWidget(self.edit_btn)
+        file_row.addWidget(self.cancel_btn)
 
         layout.addLayout(file_row)
 
@@ -127,12 +139,20 @@ class MainWindow(QMainWindow):
 
         self.hex_view.setReadOnly(True)
         self.hex_view.setLineWrapMode(QPlainTextEdit.NoWrap)
+        font = QFont("Monospace", 9)
+        font.setStyleHint(QFont.StyleHint.Monospace)
+        self.hex_view.setFont(font)
         layout.addWidget(QLabel("Buffer"))
         layout.addWidget(self.hex_view, stretch=4)
 
         self.log_view.setReadOnly(True)
         layout.addWidget(QLabel("Log"))
         layout.addWidget(self.log_view, stretch=1)
+
+        self._edit_lockout_widgets = [
+            load_btn, fill_btn, read_btn, blank_btn, program_btn, verify_btn,
+            self.eprom_combo, refresh_btn,
+        ]
 
         self.setCentralWidget(root)
 
@@ -317,3 +337,64 @@ class MainWindow(QMainWindow):
             text: Message to log
         """
         self.log_view.appendPlainText(text)
+
+    def toggle_edit_mode(self) -> None:
+        """Toggle between edit and view mode."""
+        if not self._edit_mode:
+            self._enter_edit_mode()
+        else:
+            self._apply_edits()
+
+    def _enter_edit_mode(self) -> None:
+        """Enter edit mode — allow direct hex editing."""
+        self._pre_edit_text = self.hex_view.toPlainText()
+        self._edit_mode = True
+        self.hex_view.setReadOnly(False)
+        self.hex_view.setStyleSheet("background-color: #fffbe6;")
+        self.edit_btn.setText("Apply Edits")
+        self.cancel_btn.setVisible(True)
+        self._set_edit_controls_enabled(False)
+        self.log("Edit mode: modify hex bytes, then click Apply Edits.")
+
+    def _apply_edits(self) -> None:
+        """Apply edits from hex view back to buffer."""
+        text = self.hex_view.toPlainText()
+        try:
+            new_data = parse_hex_dump(text)
+        except ValueError as exc:
+            QMessageBox.warning(self, "Invalid hex data", str(exc))
+            return
+        if len(new_data) != len(self.buffer):
+            QMessageBox.warning(
+                self, "Size mismatch",
+                f"Edited buffer is {len(new_data)} bytes, expected {len(self.buffer)}."
+            )
+            return
+        self.buffer[:] = new_data
+        self._exit_edit_mode()
+        self.update_hex_view()
+        self.log(f"Buffer updated from edits ({len(new_data)} bytes).")
+
+    def _cancel_edit(self) -> None:
+        """Cancel edits and restore original display."""
+        self.hex_view.setPlainText(self._pre_edit_text)
+        self._exit_edit_mode()
+        self.log("Edit cancelled.")
+
+    def _exit_edit_mode(self) -> None:
+        """Exit edit mode — return to view-only."""
+        self._edit_mode = False
+        self.hex_view.setReadOnly(True)
+        self.hex_view.setStyleSheet("")
+        self.edit_btn.setText("Edit Buffer")
+        self.cancel_btn.setVisible(False)
+        self._set_edit_controls_enabled(True)
+
+    def _set_edit_controls_enabled(self, enabled: bool) -> None:
+        """Disable/enable operation buttons during edit mode.
+
+        Args:
+            enabled: True to enable, False to disable
+        """
+        for widget in self._edit_lockout_widgets:
+            widget.setEnabled(enabled)
