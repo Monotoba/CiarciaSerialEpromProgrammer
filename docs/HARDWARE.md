@@ -22,8 +22,8 @@ This modernized implementation preserves the original spirit while incorporating
 
 ### Hardware Upgrades
 
-#### 1. **UART Replacement: 8250 → Arduino Nano**
-**Original**: Zilog 8250 or Intel 16550 UART IC
+#### 1. **UART Replacement: AY3-1015 → Arduino Nano**
+**Original**: AY3-1015 UART IC (from Steve Ciarcia's February 1985 design)
 **Upgraded To**: Arduino Nano (ATmega328P-based microcontroller)
 
 **Benefits**:
@@ -140,14 +140,15 @@ Error Detection: Checksum validation on all transfers
 
 ### Phase 2: Medium-Term (Significant Work)
 
-#### Support for 27xxxx 4MB parallel devices
-**Examples**: 27C010, 27C020, 27C040 (4Mbit = 512KB)
+#### Support for 27xxxx mega-bit parallel devices (512KB to 1MB)
+**Examples**: 27C010, 27C020, 27C040 (4Mbit = 512KB), 27C080 (8Mbit = 1MB)
 
 **Hardware Changes Required**:
-1. **Address Bus Expansion**: A0–A18 (19 lines for 512KB)
-   - Additional 74LS373 latches (2–3 more)
+1. **Address Bus Expansion**: A0–A19 (20 lines for 1MB)
+   - Additional 74LS373 latches (3–4 more for full 1MB support)
    - Extended shift register or multiplexed addressing
-   - Estimated board additions: 3–5 ICs, minor PCB redesign
+   - Estimated board additions: 4–6 ICs, minor-to-moderate PCB redesign
+   - Note: 27C040 (512KB) requires A0–A18 (19 lines); 27C080 requires full A0–A19
 
 2. **Data Bus**: No change (still 8-bit parallel)
 
@@ -177,7 +178,12 @@ Error Detection: Checksum validation on all transfers
 - Block-mode file loaders
 - Estimated effort: **Moderate-to-High** (20–30 hours)
 
-**Estimated PCB Changes**: 25–35% redesign
+**Addressing Ceiling with Full 27C support**: 1MB (27C080 max)
+- 27C010 / 27C020 (1Mbit / 2Mbit = 128KB / 256KB): A0–A16 / A0–A17
+- 27C040 (4Mbit = 512KB): A0–A18
+- 27C080 (8Mbit = 1MB): A0–A19
+
+**Estimated PCB Changes**: 30–40% redesign (slightly more complex than 512KB alone)
 **Backward Compatibility**: Can be maintained with mode selection
 
 ---
@@ -317,10 +323,13 @@ What we can do with current hardware (1 Arduino Nano + shift register):
 4. **Improve speed** ✓ **Possible** – block programming via buffering
 5. **Better error recovery** ✓ **Possible** – protocol enhancements
 
-### Why 27xxxx and 28xxx require hardware changes
-- **Address lines**: 19 bits for 512KB (we have 16)
-- **Voltage support**: Multiple programming voltages (we have one)
-- **Timing precision**: Microsecond-level control (Arduino timers insufficient)
+### Why mega-bit 27xxxx and 28xxx require hardware changes
+- **Address lines**: 20 bits for 1MB / 27C080 (we have 16 for 64KB)
+  - 27C010 (128KB) needs A0–A16 (17 lines)
+  - 27C040 (512KB) needs A0–A18 (19 lines)  
+  - 27C080 (1MB) needs A0–A19 (20 lines)
+- **Voltage support**: Multiple programming voltages (we have one fixed 12V from Arduino regulation)
+- **Timing precision**: Microsecond-level control (Arduino timers work but timing-critical for some devices)
 - **Current capacity**: Higher programming current needed (power supply upgrade)
 
 ---
