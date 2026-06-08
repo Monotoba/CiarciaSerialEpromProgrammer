@@ -1,5 +1,10 @@
 # Serial EPROM Programmer
 
+[![Tests](https://github.com/Monotoba/CiarciaSerialEpromProgrammer/actions/workflows/tests.yml/badge.svg)](https://github.com/Monotoba/CiarciaSerialEpromProgrammer/actions/workflows/tests.yml)
+[![Lint](https://github.com/Monotoba/CiarciaSerialEpromProgrammer/actions/workflows/lint.yml/badge.svg)](https://github.com/Monotoba/CiarciaSerialEpromProgrammer/actions/workflows/lint.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
 A modern, enterprise-grade PySide6 desktop application for reading, programming, verifying, and managing classic EPROM devices. This software is a contemporary reimplementation of the iconic **Steve Ciarcia Serial EPROM Programmer** originally featured in BYTE Magazine, February 1985.
 
 ## About This Software

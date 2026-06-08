@@ -1,5 +1,6 @@
 """Shared test fixtures and utilities."""
 
+import os
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -58,3 +59,14 @@ def mock_serial_factory(monkeypatch, mock_serial):
     yield mock_serial
 
     mock_serial.reset_mock()
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip GUI tests on headless environments."""
+    if "DISPLAY" not in os.environ and os.name != "nt":
+        skip_gui = pytest.mark.skip(
+            reason="GUI test skipped on headless environment"
+        )
+        for item in items:
+            if "gui" in item.keywords:
+                item.add_marker(skip_gui)
