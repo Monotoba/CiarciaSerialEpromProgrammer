@@ -5,7 +5,7 @@
 This software is a modern, enterprise-grade implementation of the **Steve Ciarcia Serial EPROM Programmer** originally designed in **BYTE Magazine, February 1985**. The original design was revolutionary for its simplicity: a single IC UART connected to shift registers, controlled via RS-232 serial protocol.
 
 ### Modern Upgrades
-- **UART Replacement**: Original 8250 UART IC → Arduino Nano (ATmega328P)
+- **UART Replacement**: Original AY3-1015 UART IC → Arduino Nano (ATmega328P)
 - **Address Bus Expansion**: Added A16 line for 128KB addressing (original: 64KB max)
 - **Protocol Enhancement**: Backward compatible with original, extended for modern devices
 - **File Format Support**: 9 formats spanning 1970s-present devices

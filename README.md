@@ -5,7 +5,7 @@ A modern, enterprise-grade PySide6 desktop application for reading, programming,
 ## About This Software
 
 This project modernizes Ciarcia's original design by:
-- **Replacing the 8250 UART IC** with an Arduino Nano microcontroller (ATmega328P)
+- **Replacing the AY3-1015 UART IC** with an Arduino Nano microcontroller (ATmega328P)
 - **Expanding addressing** with an additional address line (A16) for 128KB capacity
 - **Supporting 7 EPROM types** including the high-capacity 27512 (64KB)
 - **Multi-format file support** for programs from 1970s-era computers to modern microcontrollers
