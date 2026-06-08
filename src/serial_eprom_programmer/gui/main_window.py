@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from serial_eprom_programmer.devices import EPROM_TYPES
+from serial_eprom_programmer.fileformats import FileFormatError, load_file, save_file
 from serial_eprom_programmer.utils import hex_dump, parse_hex_dump
 from serial_eprom_programmer.worker import Worker
 
@@ -92,8 +93,8 @@ class MainWindow(QMainWindow):
 
         file_row = QHBoxLayout()
 
-        load_btn = QPushButton("Load Binary")
-        save_btn = QPushButton("Save Binary")
+        load_btn = QPushButton("Load File")
+        save_btn = QPushButton("Save File")
         fill_btn = QPushButton("Fill FF")
         dump_btn = QPushButton("Refresh Dump")
         self.edit_btn = QPushButton("Edit Buffer")
@@ -185,35 +186,61 @@ class MainWindow(QMainWindow):
         return int(text, 16)
 
     def load_binary(self) -> None:
-        """Load binary file into buffer."""
-        filename, _ = QFileDialog.getOpenFileName(self, "Load Binary")
+        """Load file (auto-detect format) into buffer."""
+        file_filter = (
+            "All Supported (*.bin *.hex *.ihx *.mot *.srec *.s19 *.s28 *.sx *.ahex *.mos *.papertape *.rom *.epr);;"
+            "Intel HEX (*.hex *.ihx);;"
+            "Motorola S-Record (*.mot *.srec *.s19 *.s28 *.sx);;"
+            "Addressed Hex Dump (*.ahex *.asc);;"
+            "MOS Paper Tape (*.mos *.papertape);;"
+            "Binary (*.bin *.rom *.epr);;"
+            "All Files (*)"
+        )
+        filename, _ = QFileDialog.getOpenFileName(self, "Load File", filter=file_filter)
         if not filename:
             return
 
-        path = pathlib.Path(filename)
-        data = path.read_bytes()
+        try:
+            path = pathlib.Path(filename)
+            result = load_file(path, self.eprom.size)
 
-        if len(data) > self.eprom.size:
-            QMessageBox.warning(
-                self,
-                "File too large",
-                f"File is {len(data)} bytes, EPROM size is {self.eprom.size} bytes.",
-            )
-            return
+            self.buffer[:] = result.data
+            if result.base_addr > 0:
+                self.base_edit.setText(f"{result.base_addr:04X}")
 
-        self.buffer[:] = bytes([0xFF]) * self.eprom.size
-        self.buffer[: len(data)] = data
-        self.log(f"Loaded {len(data)} bytes from {path.name}")
-        self.update_hex_view()
+            self.log(f"Loaded {len(result.data)} bytes from {path.name} ({result.format_name})")
+            self.update_hex_view()
+
+        except FileFormatError as exc:
+            QMessageBox.critical(self, "Load Error", f"Failed to load file:\n{exc}")
+        except Exception as exc:
+            QMessageBox.critical(self, "Load Error", f"Unexpected error:\n{exc}")
 
     def save_binary(self) -> None:
-        """Save buffer to binary file."""
-        filename, _ = QFileDialog.getSaveFileName(self, "Save Binary")
+        """Save buffer to file (auto-detect format by extension)."""
+        file_filter = (
+            "All Supported (*.bin *.hex *.ihx *.mot *.srec *.s19 *.s28 *.sx *.ahex *.mos *.papertape *.rom *.epr);;"
+            "Intel HEX (*.hex *.ihx);;"
+            "Motorola S-Record (*.mot *.srec *.s19 *.s28 *.sx);;"
+            "Addressed Hex Dump (*.ahex *.asc);;"
+            "MOS Paper Tape (*.mos *.papertape);;"
+            "Binary (*.bin *.rom *.epr);;"
+            "All Files (*)"
+        )
+        filename, _ = QFileDialog.getSaveFileName(self, "Save File", filter=file_filter)
         if not filename:
             return
 
-        pathlib.Path(filename).write_bytes(bytes(self.buffer))
-        self.log(f"Saved {len(self.buffer)} bytes")
+        try:
+            path = pathlib.Path(filename)
+            base_addr = self.base_addr() if self.base_edit.text().strip() else 0
+            save_file(path, bytes(self.buffer), base_addr)
+            self.log(f"Saved {len(self.buffer)} bytes to {path.name}")
+
+        except FileFormatError as exc:
+            QMessageBox.critical(self, "Save Error", f"Failed to save file:\n{exc}")
+        except Exception as exc:
+            QMessageBox.critical(self, "Save Error", f"Unexpected error:\n{exc}")
 
     def fill_ff(self) -> None:
         """Fill buffer with 0xFF."""
