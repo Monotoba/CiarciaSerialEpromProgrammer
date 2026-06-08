@@ -22,10 +22,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from serial_eprom_programmer.config import AppSettings
 from serial_eprom_programmer.devices import EPROM_TYPES
 from serial_eprom_programmer.fileformats import FileFormatError, load_file, save_file
 from serial_eprom_programmer.utils import hex_dump, parse_hex_dump
 from serial_eprom_programmer.worker import Worker
+from serial_eprom_programmer.gui.help_dialog import HelpDialog
+from serial_eprom_programmer.gui.theme_manager import ThemeManager
 
 
 class MainWindow(QMainWindow):
@@ -46,6 +49,7 @@ class MainWindow(QMainWindow):
         self.port_combo = QComboBox()
         self.baud_combo = QComboBox()
         self.eprom_combo = QComboBox()
+        self.theme_combo = QComboBox()
         self.base_edit = QLineEdit("0000")
         self.progress = QProgressBar()
         self.hex_view = QPlainTextEdit()
@@ -54,6 +58,7 @@ class MainWindow(QMainWindow):
         self._edit_mode = False
         self._pre_edit_text: str = ""
         self._edit_lockout_widgets: list = []
+        self._settings = AppSettings()
 
         self._build_ui()
         self.refresh_ports()
@@ -73,8 +78,22 @@ class MainWindow(QMainWindow):
         self.eprom_combo.addItems(EPROM_TYPES.keys())
         self.eprom_combo.currentTextChanged.connect(self.select_eprom)
 
+        self.theme_combo.addItems(["System", "Dark", "Light"])
+        current_theme = self._settings.get_theme()
+        if current_theme == "dark":
+            self.theme_combo.setCurrentText("Dark")
+        elif current_theme == "light":
+            self.theme_combo.setCurrentText("Light")
+        else:
+            self.theme_combo.setCurrentText("System")
+        self.theme_combo.currentTextChanged.connect(self.change_theme)
+
         refresh_btn = QPushButton("Refresh Ports")
         refresh_btn.clicked.connect(self.refresh_ports)
+
+        help_btn = QPushButton("?")
+        help_btn.setMaximumWidth(40)
+        help_btn.clicked.connect(self.show_help)
 
         grid.addWidget(QLabel("Port"), 0, 0)
         grid.addWidget(self.port_combo, 0, 1)
@@ -86,8 +105,12 @@ class MainWindow(QMainWindow):
         grid.addWidget(QLabel("EPROM"), 2, 0)
         grid.addWidget(self.eprom_combo, 2, 1)
 
+        grid.addWidget(QLabel("Theme"), 2, 2)
+        grid.addWidget(self.theme_combo, 2, 3)
+
         grid.addWidget(QLabel("Base Hex"), 3, 0)
         grid.addWidget(self.base_edit, 3, 1)
+        grid.addWidget(help_btn, 3, 2)
 
         layout.addWidget(config)
 
@@ -95,14 +118,16 @@ class MainWindow(QMainWindow):
 
         load_btn = QPushButton("Load File")
         save_btn = QPushButton("Save File")
-        fill_btn = QPushButton("Fill FF")
+        fill_ff_btn = QPushButton("Fill FF")
+        fill_00_btn = QPushButton("Fill 00")
         dump_btn = QPushButton("Refresh Dump")
         self.edit_btn = QPushButton("Edit Buffer")
         self.cancel_btn = QPushButton("Cancel Edit")
 
         load_btn.clicked.connect(self.load_binary)
         save_btn.clicked.connect(self.save_binary)
-        fill_btn.clicked.connect(self.fill_ff)
+        fill_ff_btn.clicked.connect(self.fill_ff)
+        fill_00_btn.clicked.connect(self.fill_00)
         dump_btn.clicked.connect(self.update_hex_view)
         self.edit_btn.clicked.connect(self.toggle_edit_mode)
         self.cancel_btn.clicked.connect(self._cancel_edit)
@@ -110,7 +135,8 @@ class MainWindow(QMainWindow):
 
         file_row.addWidget(load_btn)
         file_row.addWidget(save_btn)
-        file_row.addWidget(fill_btn)
+        file_row.addWidget(fill_ff_btn)
+        file_row.addWidget(fill_00_btn)
         file_row.addWidget(dump_btn)
         file_row.addWidget(self.edit_btn)
         file_row.addWidget(self.cancel_btn)
@@ -151,7 +177,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.log_view, stretch=1)
 
         self._edit_lockout_widgets = [
-            load_btn, fill_btn, read_btn, blank_btn, program_btn, verify_btn,
+            load_btn, fill_ff_btn, read_btn, blank_btn, program_btn, verify_btn,
             self.eprom_combo, refresh_btn,
         ]
 
@@ -248,6 +274,12 @@ class MainWindow(QMainWindow):
         self.log("Buffer filled with FF")
         self.update_hex_view()
 
+    def fill_00(self) -> None:
+        """Fill buffer with 0x00."""
+        self.buffer[:] = bytes([0x00]) * len(self.buffer)
+        self.log("Buffer filled with 00")
+        self.update_hex_view()
+
     def update_hex_view(self) -> None:
         """Update hex dump display."""
         try:
@@ -256,6 +288,31 @@ class MainWindow(QMainWindow):
             base = 0
 
         self.hex_view.setPlainText(hex_dump(bytes(self.buffer), base))
+
+    def show_help(self) -> None:
+        """Show help dialog."""
+        dialog = HelpDialog(self)
+        dialog.exec()
+
+    def change_theme(self, theme_name: str) -> None:
+        """Change application theme.
+
+        Args:
+            theme_name: 'System', 'Dark', or 'Light'
+        """
+        theme_map = {"System": "system", "Dark": "dark", "Light": "light"}
+        theme = theme_map.get(theme_name, "system")
+
+        # Save preference
+        self._settings.set_theme(theme)
+
+        # Apply theme
+        from PySide6.QtWidgets import QApplication
+        app = QApplication.instance()
+        if app:
+            ThemeManager.apply_theme(app, theme)  # type: ignore
+
+        self.log(f"Theme changed to {theme_name}")
 
     def confirm_program(self) -> None:
         """Show confirmation dialog before programming."""
