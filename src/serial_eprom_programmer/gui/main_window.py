@@ -72,7 +72,7 @@ class MainWindow(QMainWindow):
         config = QGroupBox("Connection / EPROM")
         grid = QGridLayout(config)
 
-        self.baud_combo.addItems(["300", "600", "1200", "2400", "4800", "9600", "19200", "38400"])
+        self.baud_combo.addItems(["150", "300", "600", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200", "230400"])
         self.baud_combo.setCurrentText("9600")
 
         self.eprom_combo.addItems(EPROM_TYPES.keys())

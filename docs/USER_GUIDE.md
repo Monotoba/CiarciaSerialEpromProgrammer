@@ -99,7 +99,9 @@ The application window has five main sections:
 - **Port**: Select serial port from dropdown
   - Click "Refresh Ports" to rescan for connected devices
 - **Baud**: Serial communication speed
-  - Standard options: 300, 600, 1200, 2400, 4800, 9600 (default), 19200, 38400
+  - Low speed: 150, 300, 600, 1200, 2400, 4800 (for very old or noisy connections)
+  - Standard: 9600 (default) — most reliable and widely supported
+  - High speed: 19200, 38400, 57600, 115200, 230400 (for fast modern hardware)
   - Your programmer must match the selected baud rate
 - **EPROM**: Chip type selector
   - 2716 (2KB), 2732 (4KB), 2732A (4KB), 2764 (8KB), 27128 (16KB), 27256 (32KB), 27512 (64KB)
