@@ -38,7 +38,7 @@ jobs:
     - name: Run tests with coverage (Linux)
       if: runner.os == 'Linux'
       run: |
-        pytest tests/ -v --cov=src/serial_eprom_programmer --cov-report=xml --cov-report=term --ignore=tests/test_gui.py
+        pytest tests/ -v --cov=src/serial_eprom_programmer --cov-report=xml --cov-report=term --ignore=tests/test_gui.py -p no:pytestqt --override-ini='python_files=test_*.py' -o addopts=''
       env:
         QT_QPA_PLATFORM: offscreen
 

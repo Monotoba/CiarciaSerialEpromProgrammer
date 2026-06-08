@@ -1,18 +1,10 @@
 """Shared test fixtures and utilities."""
 
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-
-
-def pytest_configure(config):
-    """Disable Qt on headless Linux to prevent pytest-qt initialization errors."""
-    if "DISPLAY" not in os.environ and os.name != "nt":
-        # Set QT_API to none to prevent pytest-qt from initializing Qt
-        os.environ["QT_API"] = "none"
 
 
 @pytest.fixture
