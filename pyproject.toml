@@ -41,9 +41,6 @@ minversion = "7.0"
 testpaths = ["tests"]
 addopts = "-v --cov=serial_eprom_programmer --cov-report=term-missing --cov-report=html"
 python_files = ["test_*.py"]
-markers = [
-    "gui: GUI tests (require display or Qt platform plugin)",
-]
 
 [tool.coverage.run]
 source = ["serial_eprom_programmer"]

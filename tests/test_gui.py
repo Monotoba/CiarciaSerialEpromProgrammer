@@ -9,7 +9,6 @@ from serial_eprom_programmer.gui.main_window import MainWindow
 
 
 @pytest.mark.qt
-@pytest.mark.gui
 class TestMainWindow:
     """Test MainWindow class (smoke tests)."""
 
