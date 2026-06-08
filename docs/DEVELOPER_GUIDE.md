@@ -7,9 +7,10 @@
 3. [Code Organization](#code-organization)
 4. [Running Tests](#running-tests)
 5. [Adding New EPROM Types](#adding-new-eprom-types)
-6. [Adding New Commands](#adding-new-commands)
-7. [Code Style](#code-style)
-8. [Extending the GUI](#extending-the-gui)
+6. [Adding New File Formats](#adding-new-file-formats)
+7. [Adding New Commands](#adding-new-commands)
+8. [Code Style](#code-style)
+9. [Extending the GUI](#extending-the-gui)
 
 ## Project Architecture
 
@@ -76,6 +77,14 @@ The application is structured in layers from hardware to UI:
 - `hex_dump()`: Format bytes as hex/ASCII display (with address column)
 - `parse_hex_dump()`: Inverse of hex_dump — parse hex dump text back to bytes
 
+**`fileformats.py`**: Multi-format file I/O
+- `FileFormat`: Base class for format handlers (abstract)
+- `LoadResult`: Dataclass with (data, base_addr, format_name)
+- Format classes: IntelHexFormat, IntelIHex32Format, MotorolaSRecordFormat, TektronixHexFormat, TiTxtFormat, AddressedHexFormat, MosTapeFormat, MifFormat, BinaryFormat
+- `detect_format(path)`: Auto-detect format by file extension
+- `load_file(path, buf_size)`: Load file with auto-detection
+- `save_file(path, data, base_addr)`: Save file with auto-detection
+
 ## Development Setup
 
 ### Clone and Install
@@ -108,24 +117,26 @@ CiarciaSerialEpromProgrammer/
 ├── .venv/                     # Virtual environment (created by setup.sh)
 ├── src/
 │   └── serial_eprom_programmer/
-│       ├── __init__.py        # Public API re-exports
-│       ├── devices.py         # EPROM type definitions
-│       ├── utils.py           # hex_dump utility
-│       ├── programmer.py      # Hardware layer (NO Qt)
-│       ├── worker.py          # Qt thread adapter
-│       ├── main.py            # Entry point (owns QApplication)
+│       ├── __init__.py           # Public API re-exports
+│       ├── devices.py            # EPROM type definitions
+│       ├── utils.py              # hex_dump/parse_hex_dump utilities
+│       ├── fileformats.py        # File format loaders/savers
+│       ├── programmer.py         # Hardware layer (NO Qt)
+│       ├── worker.py             # Qt thread adapter
+│       ├── main.py               # Entry point (owns QApplication)
 │       └── gui/
 │           ├── __init__.py
 │           ├── main_window.py # MainWindow GUI
 │           └── widgets.py     # Reusable widgets (future)
 ├── tests/
 │   ├── __init__.py
-│   ├── conftest.py            # Shared pytest fixtures
-│   ├── test_devices.py        # Device registry tests
-│   ├── test_utils.py          # Hex dump tests
-│   ├── test_programmer.py     # Hardware layer tests (mocked serial)
-│   ├── test_worker.py         # Worker thread tests
-│   └── test_gui.py            # GUI smoke tests
+│   ├── conftest.py              # Shared pytest fixtures
+│   ├── test_devices.py          # Device registry tests
+│   ├── test_utils.py            # Hex dump tests
+│   ├── test_fileformats.py      # File format roundtrip tests
+│   ├── test_programmer.py       # Hardware layer tests (mocked serial)
+│   ├── test_worker.py           # Worker thread tests
+│   └── test_gui.py              # GUI smoke tests
 ├── docs/
 │   ├── USER_GUIDE.md          # User documentation
 │   ├── DEVELOPER_GUIDE.md     # This file
@@ -228,6 +239,92 @@ Run tests to verify:
 ```bash
 pytest tests/test_devices.py -v
 ```
+
+## Adding New File Formats
+
+The application uses a pluggable format system. Adding a new file format requires:
+
+1. **Create a format class** in `src/serial_eprom_programmer/fileformats.py`:
+
+```python
+class MyCustomFormat(FileFormat):
+    """My custom file format description."""
+    
+    extensions = {".custom", ".cst"}
+    name = "My Custom Format"
+    
+    def load(self, path: Path, buf_size: int) -> LoadResult:
+        """Load file and return (data, base_addr, format_name)."""
+        data = bytearray([0xFF] * buf_size)
+        base_addr = 0
+        
+        # Parse file and populate data
+        # Validate size and checksums as needed
+        
+        return LoadResult(bytes(data), base_addr, self.name)
+    
+    def save(self, path: Path, data: bytes, base_addr: int = 0) -> None:
+        """Save data to file in custom format."""
+        # Generate file content
+        # Add headers, checksums, terminators as needed
+        path.write_text(content + '\n')
+```
+
+2. **Register the format** in `ALL_FORMATS` list:
+
+```python
+ALL_FORMATS = [
+    IntelHexFormat(),
+    MyCustomFormat(),  # Add here
+    BinaryFormat(),
+]
+```
+
+3. **Add tests** in `tests/test_fileformats.py`:
+
+```python
+class TestMyCustomFormat:
+    """Test custom format."""
+    
+    def test_roundtrip(self, temp_path):
+        """Test save→load cycle."""
+        original = bytearray([0xFF] * 256)
+        original[0:4] = [0xAA, 0xBB, 0xCC, 0xDD]
+        
+        path = temp_path / "test.custom"
+        fmt = MyCustomFormat()
+        
+        fmt.save(path, bytes(original), base_addr=0)
+        result = fmt.load(path, 256)
+        
+        assert result.data[0:4] == bytes([0xAA, 0xBB, 0xCC, 0xDD])
+        assert result.format_name == "My Custom Format"
+    
+    def test_format_detection(self, temp_path):
+        """Test format auto-detection."""
+        path = temp_path / "test.custom"
+        path.touch()
+        fmt = detect_format(path)
+        assert isinstance(fmt, MyCustomFormat)
+```
+
+4. **Key design patterns**:
+
+- **Buffer initialization**: Always initialize with `0xFF` (erased EPROM state)
+- **Base address tracking**: Use `min()` to track lowest address for display
+- **Error handling**: Raise `FileFormatError` with user-friendly messages
+- **Checksum validation**: Validate on load, compute correctly on save
+- **Terminator records**: Include any required end-of-file markers
+- **No Qt imports**: Keep format code pure Python for testability
+
+5. **Run tests to verify**:
+
+```bash
+pytest tests/test_fileformats.py::TestMyCustomFormat -v
+bash scripts/test.sh  # Full suite
+```
+
+The GUI will automatically pick up the new format from `ALL_FORMATS` registry.
 
 ## Adding New Commands
 

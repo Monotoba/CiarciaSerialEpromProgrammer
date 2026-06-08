@@ -7,8 +7,9 @@
 3. [Starting the Application](#starting-the-application)
 4. [Main Window Overview](#main-window-overview)
 5. [Step-by-Step Usage](#step-by-step-usage)
-6. [Troubleshooting](#troubleshooting)
-7. [FAQ](#faq)
+6. [Supported File Formats](#supported-file-formats)
+7. [Troubleshooting](#troubleshooting)
+8. [FAQ](#faq)
 
 ## Installation
 
@@ -101,18 +102,22 @@ The application window has five main sections:
   - Standard options: 300, 600, 1200, 2400, 4800, 9600 (default), 19200, 38400
   - Your programmer must match the selected baud rate
 - **EPROM**: Chip type selector
-  - 2716, 2732, 2732A, 2764, 27128, 27256
+  - 2716 (2KB), 2732 (4KB), 2732A (4KB), 2764 (8KB), 27128 (16KB), 27256 (32KB), 27512 (64KB)
   - Selection determines buffer size and valid address range
-- **Base Hex**: Starting address in hexadecimal (0000-FFFF)
+- **Base Hex**: Starting address in hexadecimal (0000-FFFF for ≤64KB, up to FFFFFFFF for IHEX-32)
   - Example: `1000` means operations start at address 0x1000
   - Prefix with `$` optional: `$1000` is same as `1000`
 
 ### 2. File and Buffer Operations (Buttons)
 
-- **Load Binary**: Open a file and load its contents into the buffer
+- **Load File**: Open a file and load its contents into the buffer
+  - Auto-detects format by file extension (see Supported File Formats below)
   - Buffer is pre-filled with 0xFF (EPROM default state)
   - File must fit within EPROM size
-- **Save Binary**: Write buffer contents to a file
+  - Base address automatically updated if file specifies one
+- **Save File**: Write buffer contents to a file
+  - Format auto-detected from file extension
+  - Supported formats: Intel HEX, Motorola S-Record, Binary, Addressed Hex, and more
   - Saves entire buffer (even if file was smaller than EPROM)
 - **Fill FF**: Reset entire buffer to 0xFF
   - Use before programming to erase working buffer
@@ -241,6 +246,89 @@ To modify individual bytes in the buffer without reloading a file:
    - "Cancel Edit" button disappears
    - All operation buttons are re-enabled
    - Proceed to **Program EPROM** to write changes to hardware
+
+## Supported File Formats
+
+The application supports multiple file formats for loading and saving EPROM data. The format is auto-detected by file extension.
+
+### Standard Formats
+
+**Intel HEX** (.hex, .ihx)
+- Universal standard since 1973
+- Used by: Arduino, PIC, AVR, ARM compilers, MPLAB, avr-gcc
+- Format: `:LLAAAATTDD...CC` (colon-prefixed hex records)
+- Supports checksums and addressing
+- Limited to 64KB (use Intel IHEX-32 for larger devices)
+
+**Binary** (.bin, .rom, .epr)
+- Raw binary data
+- No formatting or checksums
+- Simplest and fastest format
+- Ideal for small programs or kernels
+
+**Motorola S-Record** (.mot, .srec, .s19, .s28, .sx)
+- Motorola/Freescale standard since 1974
+- Used by: 6800/6809, 68000, ColdFire, NXP automotive ECU
+- Format: `STTNNAAAA[DD...]SS` (S-prefix records)
+- Includes checksums and address validation
+- Supports multiple record types (16-bit, 24-bit, 32-bit addressing)
+
+**Addressed Hex Dump** (.ahex, .asc)
+- Monitor program text format
+- Format: `AAAA: HH HH HH ...` (address followed by hex bytes)
+- Matches the hex view display in the application
+- Tolerant parser (handles various spacing)
+
+### Extended Formats (1990s-present)
+
+**Intel IHEX-32** (.ihex32, .hex32)
+- Extended Intel HEX with linear addressing (Type 0x04 records)
+- Supports full 32-bit addressing (up to 4GB)
+- Auto-emits extended address records when crossing 64KB boundaries
+- Used for: ARM Cortex-M flash, modern microcontrollers
+- Fully compatible with Intel HEX readers
+
+**Tektronix Extended HEX** (.tek, .tektronix, .hex_tek)
+- Test equipment and historical development tools
+- Similar to Intel HEX but uses `%` prefix instead of `:`
+- Format: `%LLAAAATTDD...CC`
+- Used by: older Tektronix logic analyzers, vintage test equipment
+
+**TI-TXT** (.txt, .ti_txt)
+- Texas Instruments microcontroller format
+- Used by: MSP430, TM4C (ARM Cortex-M4), other TI MCUs
+- Format: Address directive `@XXXX` followed by space-separated hex pairs
+- Supports non-contiguous memory blocks (gaps)
+- Terminator record: `Q`
+
+**MIF (Memory Initialization File)** (.mif)
+- Xilinx/Altera FPGA block RAM initialization format
+- Header: WIDTH, DEPTH specifications
+- Format: `@address : value, value, ... ;`
+- Content between `CONTENT BEGIN` and `END;`
+- Auto-formats with 16 bytes per address block
+
+### Historical Formats (1970s-80s)
+
+**MOS Technology Paper Tape** (.mos, .papertape)
+- KIM-1, Apple I, SYM-1, AIM-65 hobbyist computers (1976+)
+- 6502-era systems
+- Format: `;NNAAAADDDD...CC` (semicolon-prefixed records)
+- Includes record count and checksum
+- Terminator record with record count
+
+### Choosing the Right Format
+
+| Your Device | Recommended Format | Alternative |
+|-----------|-------------------|------------|
+| Arduino/ATmega | Intel HEX (.hex) | Binary (.bin) |
+| PIC Microcontroller | Intel HEX (.hex) | S-Record (.srec) |
+| ARM Cortex-M (flash >64KB) | Intel IHEX-32 (.ihex32) | Intel HEX (.hex) |
+| 6502-based (Apple I, KIM-1) | Binary (.bin) | MOS Tape (.mos) |
+| Motorola 68K/ColdFire | S-Record (.srec) | Intel HEX (.hex) |
+| Texas Instruments MCU | TI-TXT (.txt) | Intel HEX (.hex) |
+| FPGA Block RAM | MIF (.mif) | Intel HEX (.hex) |
+| Generic/Unknown | Binary (.bin) | Addressed Hex (.ahex) |
 
 ## Troubleshooting
 
