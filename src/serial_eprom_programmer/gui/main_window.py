@@ -377,7 +377,17 @@ class MainWindow(QMainWindow):
         self._pre_edit_text = self.hex_view.toPlainText()
         self._edit_mode = True
         self.hex_view.setReadOnly(False)
-        self.hex_view.setStyleSheet("background-color: #fffbe6;")
+        # Use palette-aware colors that work in dark mode
+        from PySide6.QtGui import QColor
+        palette = self.hex_view.palette()
+        # Get base color and make it slightly tinted for visibility
+        base_color = palette.base().color()
+        if base_color.lightness() < 128:
+            # Dark mode: use a darker gold/amber tint
+            self.hex_view.setStyleSheet("background-color: #3d3000; color: #e0d000;")
+        else:
+            # Light mode: use light yellow (original)
+            self.hex_view.setStyleSheet("background-color: #fffbe6;")
         self.edit_btn.setText("Apply Edits")
         self.cancel_btn.setVisible(True)
         self._set_edit_controls_enabled(False)
