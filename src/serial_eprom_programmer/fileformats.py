@@ -169,6 +169,281 @@ class IntelHexFormat(FileFormat):
         path.write_text('\n'.join(lines) + '\n')
 
 
+class IntelIHex32Format(FileFormat):
+    """Intel HEX with extended linear addressing (.ihex32, .hex32). Supports >64KB devices."""
+
+    extensions = {".ihex32", ".hex32"}
+    name = "Intel HEX-32"
+
+    def load(self, path: Path, buf_size: int) -> LoadResult:
+        lines = path.read_text().strip().split('\n')
+        data = bytearray([0xFF] * buf_size)
+        base_addr = 0xFFFFFFFF
+        upper_addr = 0
+
+        for lineno, line in enumerate(lines, 1):
+            line = line.strip()
+            if not line:
+                continue
+            if not line.startswith(':'):
+                raise FileFormatError(f"Line {lineno}: missing ':' prefix")
+            if len(line) < 11:
+                raise FileFormatError(f"Line {lineno}: record too short")
+
+            try:
+                byte_count = int(line[1:3], 16)
+                address = int(line[3:7], 16)
+                record_type = int(line[7:9], 16)
+                expected_len = 11 + byte_count * 2
+
+                if len(line) != expected_len:
+                    raise FileFormatError(f"Line {lineno}: invalid length")
+
+                data_hex = line[9 : 9 + byte_count * 2]
+                if len(data_hex) != byte_count * 2:
+                    raise FileFormatError(f"Line {lineno}: data length mismatch")
+
+                data_bytes = bytes.fromhex(data_hex)
+
+                # Verify checksum
+                checksum_calc = (byte_count + (address >> 8) + (address & 0xFF) +
+                                record_type + sum(data_bytes)) & 0xFF
+                checksum_calc = (0x100 - checksum_calc) & 0xFF
+                checksum_file = int(line[-2:], 16)
+
+                if checksum_calc != checksum_file:
+                    raise FileFormatError(
+                        f"Line {lineno}: checksum mismatch "
+                        f"(expected {checksum_file:02X}, got {checksum_calc:02X})"
+                    )
+
+                if record_type == 0x00:  # Data
+                    full_addr = upper_addr | address
+                    if full_addr + byte_count > buf_size:
+                        raise FileFormatError(
+                            f"Line {lineno}: data at 0x{full_addr:08X} exceeds EPROM size"
+                        )
+                    data[full_addr : full_addr + byte_count] = data_bytes
+                    base_addr = min(base_addr, full_addr)
+
+                elif record_type == 0x01:  # End of file
+                    break
+
+                elif record_type == 0x04:  # Extended linear address
+                    upper_addr = (int(data_hex[0:4], 16)) << 16
+
+                elif record_type == 0x05:  # Start linear address
+                    pass
+
+                elif record_type in (0x02, 0x03):  # Extended segment (deprecated)
+                    raise FileFormatError(
+                        f"Line {lineno}: extended segment addressing not supported"
+                    )
+
+            except FileFormatError:
+                raise
+            except ValueError as exc:
+                raise FileFormatError(f"Line {lineno}: invalid hex data: {exc}")
+
+        if base_addr == 0xFFFFFFFF:
+            base_addr = 0
+
+        return LoadResult(bytes(data), base_addr, self.name)
+
+    def save(self, path: Path, data: bytes, base_addr: int = 0) -> None:
+        lines = []
+        current_upper = None
+
+        for offset in range(0, len(data), 16):
+            addr = base_addr + offset
+            chunk = data[offset : offset + 16]
+            byte_count = len(chunk)
+
+            # Emit extended linear address record if upper bits changed
+            upper = (addr >> 16) & 0xFFFF
+            if upper != current_upper:
+                current_upper = upper
+                payload = bytearray([upper >> 8, upper & 0xFF])
+                checksum = (2 + sum(payload) + 0x04) & 0xFF
+                checksum = (0x100 - checksum) & 0xFF
+                lines.append(f":02000004{payload.hex().upper()}{checksum:02X}")
+
+            # Emit data record
+            lower_addr = addr & 0xFFFF
+            record_type = 0x00
+            payload = bytearray([byte_count, (lower_addr >> 8) & 0xFF, lower_addr & 0xFF, record_type])
+            payload.extend(chunk)
+
+            checksum = (sum(payload) & 0xFF)
+            checksum = (0x100 - checksum) & 0xFF
+
+            line = f":{payload.hex().upper()}{checksum:02X}"
+            lines.append(line)
+
+        lines.append(":00000001FF")  # EOF record
+        path.write_text('\n'.join(lines) + '\n')
+
+
+class TektronixHexFormat(FileFormat):
+    """Tektronix Extended HEX format (.tek, .tektronix). Similar to Intel HEX but uses % prefix."""
+
+    extensions = {".tek", ".tektronix", ".hex_tek"}
+    name = "Tektronix Extended HEX"
+
+    def load(self, path: Path, buf_size: int) -> LoadResult:
+        lines = path.read_text().strip().split('\n')
+        data = bytearray([0xFF] * buf_size)
+        base_addr = 0xFFFF
+
+        for lineno, line in enumerate(lines, 1):
+            line = line.strip()
+            if not line:
+                continue
+            if not line.startswith('%'):
+                raise FileFormatError(f"Line {lineno}: missing '%' prefix")
+            if len(line) < 11:
+                raise FileFormatError(f"Line {lineno}: record too short")
+
+            try:
+                byte_count = int(line[1:3], 16)
+                address = int(line[3:7], 16)
+                record_type = int(line[7:9], 16)
+                expected_len = 11 + byte_count * 2
+
+                if len(line) != expected_len:
+                    raise FileFormatError(f"Line {lineno}: invalid length")
+
+                data_hex = line[9 : 9 + byte_count * 2]
+                if len(data_hex) != byte_count * 2:
+                    raise FileFormatError(f"Line {lineno}: data length mismatch")
+
+                data_bytes = bytes.fromhex(data_hex)
+
+                # Verify checksum (same as Intel HEX)
+                checksum_calc = (byte_count + (address >> 8) + (address & 0xFF) +
+                                record_type + sum(data_bytes)) & 0xFF
+                checksum_calc = (0x100 - checksum_calc) & 0xFF
+                checksum_file = int(line[-2:], 16)
+
+                if checksum_calc != checksum_file:
+                    raise FileFormatError(
+                        f"Line {lineno}: checksum mismatch "
+                        f"(expected {checksum_file:02X}, got {checksum_calc:02X})"
+                    )
+
+                if record_type == 0x00:  # Data
+                    if address + byte_count > buf_size:
+                        raise FileFormatError(
+                            f"Line {lineno}: data at 0x{address:04X} exceeds EPROM size"
+                        )
+                    data[address : address + byte_count] = data_bytes
+                    base_addr = min(base_addr, address)
+
+                elif record_type == 0x01:  # End of file
+                    break
+
+            except FileFormatError:
+                raise
+            except ValueError as exc:
+                raise FileFormatError(f"Line {lineno}: invalid hex data: {exc}")
+
+        if base_addr == 0xFFFF:
+            base_addr = 0
+
+        return LoadResult(bytes(data), base_addr, self.name)
+
+    def save(self, path: Path, data: bytes, base_addr: int = 0) -> None:
+        lines = []
+        for offset in range(0, len(data), 16):
+            chunk = data[offset : offset + 16]
+            addr = base_addr + offset
+            byte_count = len(chunk)
+            record_type = 0x00
+
+            payload = bytearray([byte_count, (addr >> 8) & 0xFF, addr & 0xFF, record_type])
+            payload.extend(chunk)
+
+            checksum = (sum(payload) & 0xFF)
+            checksum = (0x100 - checksum) & 0xFF
+
+            line = f"%{payload.hex().upper()}{checksum:02X}"
+            lines.append(line)
+
+        lines.append("%00000001FF")  # EOF record
+        path.write_text('\n'.join(lines) + '\n')
+
+
+class TiTxtFormat(FileFormat):
+    """Texas Instruments TXT format (.txt). Format: @AAAA or @ AAAA sets address, then data bytes."""
+
+    extensions = {".txt", ".ti_txt"}
+    name = "TI-TXT"
+
+    def load(self, path: Path, buf_size: int) -> LoadResult:
+        lines = path.read_text().strip().split('\n')
+        data = bytearray([0xFF] * buf_size)
+        base_addr = 0xFFFF
+        current_addr = 0
+
+        for lineno, line in enumerate(lines, 1):
+            line = line.strip()
+            if not line or line.startswith(';') or line.upper() == 'Q':
+                continue
+
+            if line.startswith('@') or line.startswith('@ '):
+                # Address directive: @AAAA or @ AAAA
+                try:
+                    addr_str = line[1:].strip()
+                    if not addr_str:
+                        raise FileFormatError(f"Line {lineno}: invalid address directive")
+                    current_addr = int(addr_str, 16)
+                    base_addr = min(base_addr, current_addr)
+                except ValueError as exc:
+                    raise FileFormatError(f"Line {lineno}: invalid address: {exc}")
+            else:
+                # Data line: space-separated hex bytes
+                try:
+                    hex_values = line.split()
+                    for hex_byte in hex_values:
+                        if len(hex_byte) != 2:
+                            raise FileFormatError(f"Line {lineno}: invalid hex byte format (need 2 chars)")
+                        byte_val = int(hex_byte, 16)
+                        if current_addr >= buf_size:
+                            raise FileFormatError(
+                                f"Line {lineno}: data at 0x{current_addr:04X} exceeds EPROM size"
+                            )
+                        data[current_addr] = byte_val
+                        current_addr += 1
+                except FileFormatError:
+                    raise
+                except ValueError as exc:
+                    raise FileFormatError(f"Line {lineno}: invalid hex data: {exc}")
+
+        if base_addr == 0xFFFF:
+            base_addr = 0
+
+        return LoadResult(bytes(data), base_addr, self.name)
+
+    def save(self, path: Path, data: bytes, base_addr: int = 0) -> None:
+        lines = []
+        current_addr = base_addr
+
+        for offset in range(0, len(data), 16):
+            # Emit address directive
+            lines.append(f"@{current_addr:04X}")
+
+            # Collect 16 bytes of data (or less if at end)
+            chunk = data[offset : offset + 16]
+            hex_bytes = ' '.join(f"{byte:02X}" for byte in chunk)
+            lines.append(hex_bytes)
+
+            current_addr += len(chunk)
+
+        # Terminator record
+        lines.append("Q")
+        path.write_text('\n'.join(lines) + '\n')
+
+
 class MotorolaSRecordFormat(FileFormat):
     """Motorola S-Record format (.mot, .srec, .s19, .s28, .sx). Format: STTNNAAAADDDD...SS"""
 
@@ -195,8 +470,10 @@ class MotorolaSRecordFormat(FileFormat):
                 if len(line) != expected_len:
                     raise FileFormatError(f"Line {lineno}: invalid length for S{record_type}")
 
-                # Extract address and data based on record type
+                # Skip header and count records
                 if record_type == 0:  # Header
+                    continue
+                elif record_type == 5:  # Count record
                     continue
                 elif record_type == 1:  # 16-bit address
                     addr_len = 2
@@ -249,11 +526,12 @@ class MotorolaSRecordFormat(FileFormat):
     def save(self, path: Path, data: bytes, base_addr: int = 0) -> None:
         lines = []
 
-        # Header record
+        # Header record (S0: includes address + data + checksum in byte count)
         header = bytearray([0x00, 0x00])
         header.extend(b"EPROM")
+        byte_count = len(header) + 1  # +1 for checksum
         checksum = (sum(header) ^ 0xFF) & 0xFF
-        lines.append(f"S0{len(header):02X}{header.hex().upper()}{checksum:02X}")
+        lines.append(f"S0{byte_count:02X}{header.hex().upper()}{checksum:02X}")
 
         # Data records (S1 format: 16-bit address)
         for offset in range(0, len(data), 16):
@@ -351,8 +629,8 @@ class MosTapeFormat(FileFormat):
                 byte_count = int(line[1:3], 16)
                 address = int(line[3:7], 16)
 
-                # Check if this is a count/terminator record (0000)
-                if address == 0x0000:
+                # Skip terminator record (byte_count=0x00 and address=0x0000)
+                if byte_count == 0x00 and address == 0x0000:
                     continue
 
                 data_end = 7 + byte_count * 2
@@ -419,12 +697,96 @@ class MosTapeFormat(FileFormat):
         path.write_text('\n'.join(lines) + '\n')
 
 
+class MifFormat(FileFormat):
+    """MIF (Memory Initialization File) format (.mif). Used for FPGA and block RAM initialization."""
+
+    extensions = {".mif"}
+    name = "MIF"
+
+    def load(self, path: Path, buf_size: int) -> LoadResult:
+        content = path.read_text()
+        data = bytearray([0xFF] * buf_size)
+        base_addr = 0xFFFF
+        in_content = False
+        current_addr = 0
+
+        for line in content.split('\n'):
+            line = line.strip()
+            if not line or line.startswith('--'):
+                continue
+
+            if line.upper().startswith('CONTENT BEGIN'):
+                in_content = True
+                continue
+
+            if not in_content:
+                continue
+
+            if line.upper().startswith('END'):
+                break
+
+            # Parse content lines with address directive and data
+            if '@' in line and ':' in line:
+                # Line like: @XXXX : value, value, value;
+                try:
+                    parts = line.split(':')
+                    addr_part = parts[0].strip()
+                    if addr_part.startswith('@'):
+                        addr_str = addr_part[1:].strip()
+                        current_addr = int(addr_str, 16)
+                        base_addr = min(base_addr, current_addr)
+
+                    # Parse values after colon
+                    if len(parts) > 1:
+                        val_part = parts[1].strip().rstrip(';')
+                        hex_values = val_part.replace(',', ' ').split()
+                        for hex_val in hex_values:
+                            hex_val = hex_val.strip()
+                            if hex_val:
+                                byte_val = int(hex_val, 16)
+                                if current_addr < buf_size:
+                                    data[current_addr] = byte_val
+                                    current_addr += 1
+                except (ValueError, IndexError):
+                    pass
+
+        if base_addr == 0xFFFF:
+            base_addr = 0
+
+        return LoadResult(bytes(data), base_addr, self.name)
+
+    def save(self, path: Path, data: bytes, base_addr: int = 0) -> None:
+        lines = []
+        lines.append("-- MIF file generated by Serial EPROM Programmer")
+        lines.append("WIDTH=8;")
+        lines.append(f"DEPTH={len(data)};")
+        lines.append("")
+        lines.append("CONTENT BEGIN")
+        lines.append(f"  @{base_addr:04X}  :  {data[0]:02X};")
+
+        for offset in range(1, len(data)):
+            byte_val = data[offset]
+            current_addr = base_addr + offset
+            if offset % 16 == 0:
+                lines.append(f"  @{current_addr:04X}  :  {byte_val:02X};")
+            else:
+                # Continue on same line if still in sequence
+                lines[-1] = lines[-1].rstrip(';') + f", {byte_val:02X};"
+
+        lines.append("END;")
+        path.write_text('\n'.join(lines) + '\n')
+
+
 # Registry of all formats
 ALL_FORMATS = [
     IntelHexFormat(),
+    IntelIHex32Format(),
     MotorolaSRecordFormat(),
+    TektronixHexFormat(),
+    TiTxtFormat(),
     AddressedHexFormat(),
     MosTapeFormat(),
+    MifFormat(),
     BinaryFormat(),
 ]
 

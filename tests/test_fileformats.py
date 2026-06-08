@@ -9,8 +9,12 @@ from serial_eprom_programmer.fileformats import (
     BinaryFormat,
     FileFormatError,
     IntelHexFormat,
+    IntelIHex32Format,
+    MifFormat,
     MosTapeFormat,
     MotorolaSRecordFormat,
+    TektronixHexFormat,
+    TiTxtFormat,
     detect_format,
     load_file,
     save_file,
@@ -99,6 +103,36 @@ class TestMotorolaSRecordFormat:
         with pytest.raises(FileFormatError, match="checksum"):
             fmt.load(path, 2048)
 
+    def test_srec_roundtrip(self, temp_path):
+        """Test saving and loading S-Record file."""
+        original = bytearray([0xFF] * 256)
+        original[0:4] = [0xAA, 0xBB, 0xCC, 0xDD]
+        original[16:20] = [0x11, 0x22, 0x33, 0x44]
+
+        path = temp_path / "test.srec"
+        fmt = MotorolaSRecordFormat()
+
+        fmt.save(path, bytes(original), base_addr=0)
+        result = fmt.load(path, 256)
+
+        assert result.data[0:4] == bytes([0xAA, 0xBB, 0xCC, 0xDD])
+        assert result.data[16:20] == bytes([0x11, 0x22, 0x33, 0x44])
+        assert result.format_name == "Motorola S-Record"
+
+    def test_srec_roundtrip_with_base_addr_zero(self, temp_path):
+        """Test S-Record with data at address 0x0000."""
+        original = bytearray([0xFF] * 64)
+        original[0:8] = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77]
+
+        path = temp_path / "test.srec"
+        fmt = MotorolaSRecordFormat()
+
+        fmt.save(path, bytes(original), base_addr=0)
+        result = fmt.load(path, 64)
+
+        assert result.data[0:8] == bytes(original[0:8])
+        assert result.base_addr == 0
+
 
 class TestAddressedHexFormat:
     """Test addressed hex dump format."""
@@ -141,6 +175,151 @@ class TestMosTapeFormat:
         with pytest.raises(FileFormatError):
             fmt.load(path, 2048)
 
+    def test_mos_roundtrip(self, temp_path):
+        """Test saving and loading MOS tape file."""
+        original = bytearray([0xFF] * 256)
+        original[0:4] = [0xAA, 0xBB, 0xCC, 0xDD]
+        original[16:20] = [0x11, 0x22, 0x33, 0x44]
+
+        path = temp_path / "test.mos"
+        fmt = MosTapeFormat()
+
+        fmt.save(path, bytes(original), base_addr=0)
+        result = fmt.load(path, 256)
+
+        assert result.data[0:4] == bytes([0xAA, 0xBB, 0xCC, 0xDD])
+        assert result.data[16:20] == bytes([0x11, 0x22, 0x33, 0x44])
+        assert result.format_name == "MOS Paper Tape"
+
+    def test_mos_roundtrip_with_base_addr_zero(self, temp_path):
+        """Test MOS tape with data at address 0x0000."""
+        original = bytearray([0xFF] * 64)
+        original[0:8] = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77]
+
+        path = temp_path / "test.mos"
+        fmt = MosTapeFormat()
+
+        fmt.save(path, bytes(original), base_addr=0)
+        result = fmt.load(path, 64)
+
+        assert result.data[0:8] == bytes(original[0:8])
+        assert result.base_addr == 0
+
+
+class TestIntelIHex32Format:
+    """Test Intel HEX-32 (extended linear addressing) format."""
+
+    def test_ihex32_roundtrip(self, temp_path):
+        """Test saving and loading Intel HEX-32 file."""
+        original = bytearray([0xFF] * 256)
+        original[0:4] = [0xAA, 0xBB, 0xCC, 0xDD]
+        original[16:20] = [0x11, 0x22, 0x33, 0x44]
+
+        path = temp_path / "test.ihex32"
+        fmt = IntelIHex32Format()
+
+        fmt.save(path, bytes(original), base_addr=0)
+        result = fmt.load(path, 256)
+
+        assert result.data[0:4] == bytes([0xAA, 0xBB, 0xCC, 0xDD])
+        assert result.data[16:20] == bytes([0x11, 0x22, 0x33, 0x44])
+        assert result.format_name == "Intel HEX-32"
+
+    def test_ihex32_extended_addressing(self, temp_path):
+        """Test Intel HEX-32 with data above 64KB boundary."""
+        original = bytearray([0xFF] * 65536)
+        original[0:4] = [0xAA, 0xBB, 0xCC, 0xDD]
+        original[65520:65524] = [0x11, 0x22, 0x33, 0x44]
+
+        path = temp_path / "test.ihex32"
+        fmt = IntelIHex32Format()
+
+        fmt.save(path, bytes(original), base_addr=0)
+        result = fmt.load(path, 65536)
+
+        assert result.data[0:4] == bytes([0xAA, 0xBB, 0xCC, 0xDD])
+        assert result.data[65520:65524] == bytes([0x11, 0x22, 0x33, 0x44])
+
+
+class TestTektronixHexFormat:
+    """Test Tektronix Extended HEX format."""
+
+    def test_tektronix_roundtrip(self, temp_path):
+        """Test saving and loading Tektronix HEX file."""
+        original = bytearray([0xFF] * 256)
+        original[0:4] = [0xAA, 0xBB, 0xCC, 0xDD]
+        original[16:20] = [0x11, 0x22, 0x33, 0x44]
+
+        path = temp_path / "test.tek"
+        fmt = TektronixHexFormat()
+
+        fmt.save(path, bytes(original), base_addr=0)
+        result = fmt.load(path, 256)
+
+        assert result.data[0:4] == bytes([0xAA, 0xBB, 0xCC, 0xDD])
+        assert result.data[16:20] == bytes([0x11, 0x22, 0x33, 0x44])
+        assert result.format_name == "Tektronix Extended HEX"
+
+
+class TestTiTxtFormat:
+    """Test Texas Instruments TXT format."""
+
+    def test_ti_txt_roundtrip(self, temp_path):
+        """Test saving and loading TI-TXT file."""
+        original = bytearray([0xFF] * 256)
+        original[0:4] = [0xAA, 0xBB, 0xCC, 0xDD]
+        original[16:20] = [0x11, 0x22, 0x33, 0x44]
+
+        path = temp_path / "test.ti_txt"
+        fmt = TiTxtFormat()
+
+        fmt.save(path, bytes(original), base_addr=0)
+        result = fmt.load(path, 256)
+
+        assert result.data[0:4] == bytes([0xAA, 0xBB, 0xCC, 0xDD])
+        assert result.data[16:20] == bytes([0x11, 0x22, 0x33, 0x44])
+        assert result.format_name == "TI-TXT"
+
+    def test_ti_txt_with_comments(self, temp_path):
+        """Test TI-TXT parsing with comment lines."""
+        path = temp_path / "test.txt"
+        content = """; Test file
+@0000
+AA BB CC DD FF FF FF FF
+; More data
+11 22 33 44
+Q
+"""
+        path.write_text(content)
+
+        fmt = TiTxtFormat()
+        result = fmt.load(path, 256)
+
+        assert result.data[0] == 0xAA
+        assert result.data[1] == 0xBB
+        assert result.data[8] == 0x11
+        assert result.base_addr == 0
+
+
+class TestMifFormat:
+    """Test MIF (Memory Initialization File) format."""
+
+    def test_mif_roundtrip(self, temp_path):
+        """Test saving and loading MIF file."""
+        original = bytearray([0xFF] * 256)
+        original[0:4] = [0xAA, 0xBB, 0xCC, 0xDD]
+        original[16:20] = [0x11, 0x22, 0x33, 0x44]
+
+        path = temp_path / "test.mif"
+        fmt = MifFormat()
+
+        fmt.save(path, bytes(original), base_addr=0)
+        result = fmt.load(path, 256)
+
+        assert result.data[0:4] == bytes([0xAA, 0xBB, 0xCC, 0xDD])
+        assert result.data[16:20] == bytes([0x11, 0x22, 0x33, 0x44])
+        assert result.format_name == "MIF"
+
 
 class TestFormatDetection:
     """Test format auto-detection."""
@@ -179,6 +358,34 @@ class TestFormatDetection:
         path.touch()
         fmt = detect_format(path)
         assert isinstance(fmt, MosTapeFormat)
+
+    def test_detect_ihex32(self, temp_path):
+        """Test detecting Intel HEX-32 by extension."""
+        path = temp_path / "test.ihex32"
+        path.touch()
+        fmt = detect_format(path)
+        assert isinstance(fmt, IntelIHex32Format)
+
+    def test_detect_tektronix(self, temp_path):
+        """Test detecting Tektronix HEX by extension."""
+        path = temp_path / "test.tek"
+        path.touch()
+        fmt = detect_format(path)
+        assert isinstance(fmt, TektronixHexFormat)
+
+    def test_detect_ti_txt(self, temp_path):
+        """Test detecting TI-TXT by extension."""
+        path = temp_path / "test.ti_txt"
+        path.touch()
+        fmt = detect_format(path)
+        assert isinstance(fmt, TiTxtFormat)
+
+    def test_detect_mif(self, temp_path):
+        """Test detecting MIF by extension."""
+        path = temp_path / "test.mif"
+        path.touch()
+        fmt = detect_format(path)
+        assert isinstance(fmt, MifFormat)
 
     def test_detect_unknown(self, temp_path):
         """Test that unknown extension raises error."""
