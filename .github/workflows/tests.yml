@@ -35,7 +35,15 @@ jobs:
         pip install -r requirements-dev.txt
         pip install -e .
 
-    - name: Run tests with coverage
+    - name: Run tests with coverage (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        pytest tests/ -v --cov=src/serial_eprom_programmer --cov-report=xml --cov-report=term -m "not gui"
+      env:
+        QT_QPA_PLATFORM: offscreen
+
+    - name: Run tests with coverage (non-Linux)
+      if: runner.os != 'Linux'
       run: |
         pytest tests/ -v --cov=src/serial_eprom_programmer --cov-report=xml --cov-report=term
       env:
