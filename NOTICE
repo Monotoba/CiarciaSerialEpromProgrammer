@@ -1,0 +1,13 @@
+License scope and historical references
+
+The BSD-2-Clause license covers this project's original code, tests, scripts,
+and documentation. It does not relicense third-party material.
+
+The BYTE magazine PDF under docs/Hardware/ is historical reference material.
+Its article, images, and other contents remain subject to their original
+copyrights and terms. This project does not grant redistribution rights to
+that material under BSD-2-Clause. It is not included in the Python wheel.
+
+Steve Ciarcia and BYTE are acknowledged as the historical inspiration for
+this project. No endorsement or verified hardware/protocol compatibility is
+claimed. Dependencies retain their own licenses.

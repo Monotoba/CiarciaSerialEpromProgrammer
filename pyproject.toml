@@ -7,7 +7,7 @@ name = "serial-eprom-programmer"
 version = "1.0.0"
 description = "PySide6 GUI for reading/programming classic 27xx-series EPROMs via serial port"
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "BSD-2-Clause"}
 authors = [
     {name = "Randy Morgan", email = "rmorgan62@gmail.com"}
 ]
@@ -25,6 +25,11 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.5.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Monotoba/CiarciaSerialEpromProgrammer"
+Issues = "https://github.com/Monotoba/CiarciaSerialEpromProgrammer/issues"
+Documentation = "https://github.com/Monotoba/CiarciaSerialEpromProgrammer/tree/main/docs"
 
 [project.scripts]
 serial-eprom-programmer = "serial_eprom_programmer.main:main"

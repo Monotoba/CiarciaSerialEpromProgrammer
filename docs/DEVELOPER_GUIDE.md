@@ -1,20 +1,12 @@
 # Developer Guide — Serial EPROM Programmer
 
-## Historical Context
+## Scope
 
-This software is a modern, enterprise-grade implementation of the **Steve Ciarcia Serial EPROM Programmer** originally designed in **BYTE Magazine, February 1985**. The original design was revolutionary for its simplicity: a single IC UART connected to shift registers, controlled via RS-232 serial protocol.
-
-### Modern Upgrades
-- **UART Replacement**: Original AY3-1015 UART IC → Arduino Nano (ATmega328P)
-- **Address Bus Expansion**: Added A16 line for 128KB addressing (original: 64KB max)
-- **Protocol Enhancement**: Backward compatible with original, extended for modern devices
-- **File Format Support**: 9 formats spanning 1970s-present devices
-
-See [HARDWARE.md](HARDWARE.md) for detailed information about:
-- Original design and hardware upgrades
-- Current device support roadmap
-- Future hardware expansion plans (27C, 28F support)
-- Protocol specifications and backwards compatibility
+This Python/PySide6 desktop host is inspired by Steve Ciarcia's February 1985
+BYTE programmer. Arduino/A16 upgrades are proposals, and original-hardware
+compatibility is unvalidated. The current host uses only the R/P protocol in
+[SERIAL_PROTOCOL.md](SERIAL_PROTOCOL.md). See [FEATURE_STATUS.md](FEATURE_STATUS.md)
+for implemented features, validation limits, and next steps.
 
 ## Table of Contents
 

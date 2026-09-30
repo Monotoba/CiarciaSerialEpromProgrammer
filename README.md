@@ -2,8 +2,10 @@
 
 [![Tests](https://github.com/Monotoba/CiarciaSerialEpromProgrammer/actions/workflows/tests.yml/badge.svg)](https://github.com/Monotoba/CiarciaSerialEpromProgrammer/actions/workflows/tests.yml)
 [![Lint](https://github.com/Monotoba/CiarciaSerialEpromProgrammer/actions/workflows/lint.yml/badge.svg)](https://github.com/Monotoba/CiarciaSerialEpromProgrammer/actions/workflows/lint.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: BSD-2-Clause](https://img.shields.io/badge/License-BSD--2--Clause-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![GUI: PySide6](https://img.shields.io/badge/GUI-PySide6-green.svg)](https://doc.qt.io/qtforpython-6/)
+[![Status: work in progress](https://img.shields.io/badge/status-work_in_progress-orange.svg)](STATUS.md)
 
 A Python/PySide6 desktop application for reading, programming, verifying, and managing classic EPROM devices. This software is a contemporary reimplementation of the iconic **Steve Ciarcia Serial EPROM Programmer** originally featured in BYTE Magazine, February 1985.
 
@@ -137,7 +139,8 @@ Each layer is independent and testable. See [DEVELOPER_GUIDE.md](docs/DEVELOPER_
 
 ## License
 
-MIT
+Original project code and documentation are licensed under [BSD-2-Clause](LICENSE).
+Historical BYTE reference material is excluded; see [NOTICE](NOTICE).
 
 ## Author
 
@@ -145,4 +148,6 @@ Randy Morgan <rmorgan62@gmail.com>
 
 ## Contributing
 
-Contributions welcome! Please see [DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) for setup and testing.
+Contributions welcome! Start with [CONTRIBUTING.md](CONTRIBUTING.md),
+[feature status](docs/FEATURE_STATUS.md), and the
+[release checklist](docs/RELEASE_CHECKLIST.md).

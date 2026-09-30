@@ -28,8 +28,8 @@ Linux now runs the complete GUI suite with pytest-qt, rather than uninstalling
 pytest-qt and excluding GUI tests. Every platform builds and checks a wheel.
 A 15-minute job timeout prevents unbounded waits, and matrix jobs run independently.
 The packaging/dialog/EGL fixes passed all nine OS/Python matrix jobs and lint
-on GitHub (run 36718482321). The later transfer-boundary changes require a fresh
-CI run.
+on GitHub (run 36718482321). The transfer-boundary changes also passed all nine matrix jobs and lint
+(run 36719056483). Later documentation/license changes require a fresh CI run.
 
 ## Remaining checks
 
@@ -39,7 +39,8 @@ CI run.
   Host framing now uses two 32 KiB commands and rejects address overflow.
 - Validate hardware compatibility, voltages, and programming behavior on a
   documented physical configuration; no hardware validation was performed here.
-- Resolve license documentation and add a license file. README and package
-  metadata currently declare MIT; GitHub does not recognize a repository license.
-- Add GitHub description/topics and contributor guidance.
+- Confirm license recognition after merge. BSD-2-Clause now covers original
+  project work; NOTICE excludes third-party historical references.
+- Add GitHub description/topics. Contributor guidance and feature/release
+  checklists are now included.
 - Decide on release version and status after validation.
