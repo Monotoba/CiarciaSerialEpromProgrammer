@@ -13,8 +13,8 @@ were not supported by a completed clean-install and hardware validation record.
 Environment: Linux, Python 3.12.14, PySide6/Qt 6.11.2; Qt offscreen platform.
 
 - Clean-clone setup completed with `bash scripts/setup.sh`.
-- All 111 tests passed, including GUI tests; combined statement/branch coverage
-  was 73.20%. Serial communication tests use mocks.
+- All 129 tests passed, including GUI tests; combined statement/branch coverage
+  was 73.49%. Serial communication tests use mocks.
 - Ruff passed for `src/`, `tests/`, and `scripts/check_wheel.py`.
 - A built wheel imported the entry point and opened the GUI in an isolated
   subprocess outside the checkout.
@@ -22,18 +22,21 @@ Environment: Linux, Python 3.12.14, PySide6/Qt 6.11.2; Qt offscreen platform.
 - Fixed three GUI tests that blocked on modal dialogs. The tests now mock the
   dialog methods and verify the expected messages.
 
-## CI changes awaiting GitHub results
+## CI results and further changes
 
 Linux now runs the complete GUI suite with pytest-qt, rather than uninstalling
 pytest-qt and excluding GUI tests. Every platform builds and checks a wheel.
 A 15-minute job timeout prevents unbounded waits, and matrix jobs run independently.
-Local results do not establish that the Windows/macOS jobs pass.
+The packaging/dialog/EGL fixes passed all nine OS/Python matrix jobs and lint
+on GitHub (run 36718482321). The later transfer-boundary changes require a fresh
+CI run.
 
 ## Remaining checks
 
 - Confirm the new GitHub Actions results on Linux, macOS, and Windows.
 - Review documented features against the code and test coverage.
-- Review protocol limits, including the encoding of a 64 KiB transfer length.
+- Validate split 64 KiB transfers with compatible physical firmware.
+  Host framing now uses two 32 KiB commands and rejects address overflow.
 - Validate hardware compatibility, voltages, and programming behavior on a
   documented physical configuration; no hardware validation was performed here.
 - Resolve license documentation and add a license file. README and package

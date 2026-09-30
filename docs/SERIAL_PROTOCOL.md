@@ -4,6 +4,21 @@
 
 The Serial EPROM Programmer communicates with a hardware device over RS-232/USB-serial. This document specifies the wire-level protocol.
 
+## Implementation limits
+
+This describes the current Python host protocol, not verified compatibility with
+historical Ciarcia hardware. No matching firmware is included in this repository.
+
+- Addresses are 16-bit; each command carries 1–32768 bytes.
+- A 65536-byte 27512 transfer at base zero uses two commands: address `0x0000`,
+  length `0x8000`, then address `0x8000`, length `0x8000`. Zero never means 64 KiB.
+- Empty transfers, negative addresses/sizes, and ranges beyond `0xFFFF` are rejected
+  before sending a command. Progress reports the cumulative bytes transferred.
+- Firmware must support consecutive commands for these split transfers. The host
+  does not negotiate capabilities, wait for a programming ACK, or check a checksum.
+  Serial mocks verify framing; physical hardware behavior remains unvalidated.
+- The host reads for blank-check and verify and compares bytes locally.
+
 ## Connection Parameters
 
 | Parameter | Value |
@@ -83,7 +98,9 @@ Byte 4: 0x00           ; Length high (0x00)
 Byte 5-36: [32 data bytes]
 ```
 
-**Response**: No explicit response (command succeeds if all bytes received)
+**Response**: No explicit response. A successful host write/flush confirms transport
+completion only; it does not confirm that the EPROM was programmed. Use Verify
+and validate firmware/device programming behavior separately.
 
 **Timing**:
 - Per-byte program: ~10-100ms (depends on EPROM type)
@@ -120,6 +137,7 @@ Valid address range depends on EPROM type:
 | 2764 | 8KB | 0x1FFF |
 | 27128 | 16KB | 0x3FFF |
 | 27256 | 32KB | 0x7FFF |
+| 27512 | 64KB | 0xFFFF |
 
 Addressing beyond max address is hardware-dependent (may wrap or fail silently).
 
@@ -174,7 +192,7 @@ The protocol assumes a simple request-response model with no handshaking:
 
 - Host sends complete command
 - Host waits for response
-- Device responds with data or acknowledgment
+- Device responds with raw data for reads; programming has no acknowledgment
 - No flow control (RTS/CTS not used)
 
 If the host loses synchronization (receives garbage), the only recovery is to:

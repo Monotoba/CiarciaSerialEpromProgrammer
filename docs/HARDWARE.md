@@ -16,90 +16,31 @@ See `docs/Hardware/198502_Byte_Magazine_Vol_10-02_Computing_and_the_Sciences (1)
 
 ---
 
-## 2024 Upgrade Overview
+## Current implementation and hardware boundary
 
-This modernized implementation preserves the original spirit while incorporating contemporary improvements:
+The repository supplies a desktop host application and historical reference
+material. It supplies no Arduino firmware, completed wiring design, or hardware
+validation record. The Arduino Nano replacement and A16 expansion described in
+the roadmap are proposals. The current host sends only 16-bit addresses and
+cannot access a 128 KiB device.
 
-### Hardware Upgrades
+The host wire protocol is documented in [SERIAL_PROTOCOL.md](SERIAL_PROTOCOL.md):
+`R` or `P`, followed by a two-byte little-endian address and a two-byte
+little-endian length. It has no checksum, ACK/NAK parsing, device auto-detection,
+or RTS/CTS flow control. Compatibility with the original 1985 design has not
+been established. Blank checking and verification read data and compare it on
+the host; they do not send dedicated blank-check or verify commands.
 
-#### 1. **UART Replacement: AY3-1015 → Arduino Nano**
-**Original**: AY3-1015 UART IC (from Steve Ciarcia's February 1985 design)
-**Upgraded To**: Arduino Nano (ATmega328P-based microcontroller)
-
-**Benefits**:
-- Eliminates separate UART IC dependency
-- Built-in USB-to-Serial conversion (CH340 or FT232RL on-board)
-- Programmable firmware for future enhancements
-- Easier to repair/replace (single module vs. discrete components)
-- No external crystal oscillator needed (built-in 16MHz)
-
-**Firmware Implications**:
-- Simplified serial protocol handling via Arduino IDE
-- Can add intelligent error correction without hardware redesign
-- Enables EEPROM-based device profile storage on Arduino
-- Potential for wireless upgrades via Bluetooth module addition
-
-#### 2. **Address Bus Expansion**
-**Original**: 16 address lines (A0–A15) = 64KB addressing
-**Upgraded**: Additional address line (A16) = 128KB addressing
-
-**Hardware Changes**:
-- Third address decoder chip (or extended latch) for A16
-- Higher-capacity shift register or additional 8-bit latch
-- Modified voltage regulation for increased current draw
-
-**Addressing Capabilities**:
-- Original: 64KB (27256 max: 32KB)
-- Upgraded: 128KB (27512: 64KB, with room for future 128KB devices)
-
----
-
-## Protocol Overview
-
-### Original Protocol (1985)
-Simple RS-232 command structure optimized for 300-9600 baud:
-
-```
-Command Format: <CMD><ADDRESS_HI><ADDRESS_LO><DATA>
-Response: <ACK|NAK><DATA>
-
-Commands:
-  R - Read byte at address
-  W - Write byte at address
-  B - Blank check
-  P - Program device
-  V - Verify
-  C - Clear buffer
-```
-
-### Modern Implementation Protocol
-**Backward Compatible** with original, with extensions:
-
-```
-Enhanced Format: <CMD>[<LEN>][<ADDR>][<DATA>][<CHK>]
-- CMD: Single command byte
-- LEN: Optional payload length
-- ADDR: 2-3 byte address (supports extended addressing)
-- DATA: Variable-length data payload
-- CHK: Optional checksum for reliability
-
-Baud Rates: 150–230400 bps (original: 300–19200)
-Handshaking: Hardware flow control support (RTS/CTS)
-Error Detection: Checksum validation on all transfers
-```
-
-**New Features**:
-- Multi-byte addressing for 128KB+ devices
-- Bulk programming (256+ bytes without pause)
-- Device auto-detection
-- Checksum validation
-- Programmable device profiles
+The remaining hardware enhancements below are design ideas that require a
+validated schematic, firmware, and device-specific electrical/timing checks.
+Statements about an existing upgraded circuit must not be treated as evidence
+of completed hardware.
 
 ---
 
 ## Current Device Support
 
-### Implemented
+### Device profiles in the host application
 - 2716 (2KB) ✓
 - 2732 / 2732A (4KB) ✓
 - 2764 (8KB) ✓
@@ -126,7 +67,7 @@ Error Detection: Checksum validation on all transfers
 
 #### Support for 27xx128K devices (128KB EPROM)
 - **Examples**: 27C128, 27C256 (existing), hypothetical 27C128
-- **Hardware Changes Needed**: **None** – already addressed by A16 expansion
+- **Hardware Changes Needed**: A16 addressing and matching firmware; neither is supplied here
 - **Software Changes**: Extended address handling (17-bit support)
 - **Effort**: Low – firmware update only
 
