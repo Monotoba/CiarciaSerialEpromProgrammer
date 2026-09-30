@@ -5,13 +5,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-A modern, enterprise-grade PySide6 desktop application for reading, programming, verifying, and managing classic EPROM devices. This software is a contemporary reimplementation of the iconic **Steve Ciarcia Serial EPROM Programmer** originally featured in BYTE Magazine, February 1985.
+A Python/PySide6 desktop application for reading, programming, verifying, and managing classic EPROM devices. This software is a contemporary reimplementation of the iconic **Steve Ciarcia Serial EPROM Programmer** originally featured in BYTE Magazine, February 1985.
+
+## Current status
+
+Work in progress; no release has been published. The software includes tests with
+mocked serial communication, but those tests do not establish compatibility with
+physical programmer hardware. This repository contains the desktop application
+and hardware reference documentation; it does not include Arduino firmware.
+See [STATUS.md](STATUS.md) for the latest verification and outstanding work.
 
 ## About This Software
 
 This project modernizes Ciarcia's original design by:
-- **Replacing the AY3-1015 UART IC** with an Arduino Nano microcontroller (ATmega328P)
-- **Expanding addressing** with an additional address line (A16) for 128KB capacity
+- **Documenting a proposed Arduino Nano replacement** for the AY3-1015 UART IC
+- **Discussing future A16 addressing**; the current host protocol is limited to 64 KiB
 - **Supporting 7 EPROM types** including the high-capacity 27512 (64KB)
 - **Multi-format file support** for programs from 1970s-era computers to modern microcontrollers
 - **Professional dark/light themes** and comprehensive built-in help system
@@ -19,7 +27,7 @@ This project modernizes Ciarcia's original design by:
 See **[HARDWARE.md](docs/HARDWARE.md)** for detailed information about:
 - Original 1985 design and Steve Ciarcia's article
 - Modern hardware upgrades (UART replacement, address expansion)
-- Protocol enhancements and backwards compatibility
+- Current protocol limits and proposed hardware enhancements
 - Roadmap for future hardware revisions (27C, 28F support)
 
 ## Features
@@ -49,7 +57,7 @@ See **[HARDWARE.md](docs/HARDWARE.md)** for detailed information about:
 ### Installation
 
 ```bash
-git clone <repo>
+git clone https://github.com/Monotoba/CiarciaSerialEpromProgrammer.git
 cd CiarciaSerialEpromProgrammer
 bash scripts/setup.sh
 ```
