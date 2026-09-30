@@ -8,8 +8,10 @@ on:
 
 jobs:
   test:
+    timeout-minutes: 15
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ['3.10', '3.11', '3.12']
@@ -35,17 +37,17 @@ jobs:
         pip install -r requirements-dev.txt
         pip install -e .
 
-    - name: Run tests with coverage (Linux)
-      if: runner.os == 'Linux'
+    - name: Run all tests with coverage
       run: |
-        pip uninstall pytest-qt -y && pytest tests/ -v --cov=src/serial_eprom_programmer --cov-report=xml --cov-report=term --ignore=tests/test_gui.py
+        pytest tests/ -v --cov=serial_eprom_programmer --cov-report=xml --cov-report=term
       env:
         QT_QPA_PLATFORM: offscreen
 
-    - name: Run tests with coverage (non-Linux)
-      if: runner.os != 'Linux'
-      run: |
-        pytest tests/ -v --cov=src/serial_eprom_programmer --cov-report=xml --cov-report=term
+    - name: Build wheel
+      run: python -m pip wheel . --no-deps --wheel-dir dist
+
+    - name: Check built wheel and GUI launch
+      run: python scripts/check_wheel.py
       env:
         QT_QPA_PLATFORM: offscreen
 

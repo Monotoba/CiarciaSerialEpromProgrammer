@@ -30,8 +30,11 @@ dev = [
 serial-eprom-programmer = "serial_eprom_programmer.main:main"
 
 [tool.setuptools]
-packages = ["serial_eprom_programmer"]
 package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["serial_eprom_programmer*"]
 
 [tool.setuptools.package-data]
 serial_eprom_programmer = ["py.typed"]
@@ -41,6 +44,7 @@ minversion = "7.0"
 testpaths = ["tests"]
 addopts = "-v --cov=serial_eprom_programmer --cov-report=term-missing --cov-report=html"
 python_files = ["test_*.py"]
+markers = ["qt: tests that exercise Qt widgets"]
 
 [tool.coverage.run]
 source = ["serial_eprom_programmer"]

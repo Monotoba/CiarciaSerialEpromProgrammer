@@ -5,7 +5,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-A modern, enterprise-grade PySide6 desktop application for reading, programming, verifying, and managing classic EPROM devices. This software is a contemporary reimplementation of the iconic **Steve Ciarcia Serial EPROM Programmer** originally featured in BYTE Magazine, February 1985.
+A Python/PySide6 desktop application for reading, programming, verifying, and managing classic EPROM devices. This software is a contemporary reimplementation of the iconic **Steve Ciarcia Serial EPROM Programmer** originally featured in BYTE Magazine, February 1985.
+
+## Current status
+
+Work in progress; no release has been published. The software includes tests with
+mocked serial communication, but those tests do not establish compatibility with
+physical programmer hardware. This repository contains the desktop application
+and hardware reference documentation; it does not include Arduino firmware.
+See [STATUS.md](STATUS.md) for the latest verification and outstanding work.
 
 ## About This Software
 
@@ -49,7 +57,7 @@ See **[HARDWARE.md](docs/HARDWARE.md)** for detailed information about:
 ### Installation
 
 ```bash
-git clone <repo>
+git clone https://github.com/Monotoba/CiarciaSerialEpromProgrammer.git
 cd CiarciaSerialEpromProgrammer
 bash scripts/setup.sh
 ```
