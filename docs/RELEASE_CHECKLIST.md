@@ -2,8 +2,8 @@
 
 ## Before an experimental host-software prerelease
 
-- [ ] Merge the reviewed PR after all latest-commit CI jobs pass.
-- [ ] Select and synchronize an alpha version in `pyproject.toml` and package `__version__`.
+- [x] Merge the cleanup PR after all latest-commit CI jobs pass.
+- [x] Select and synchronize alpha version `1.0.0a1` in `pyproject.toml` and package `__version__`.
 - [ ] Build wheel and source distribution from the intended release commit.
 - [ ] Install/check the wheel outside the checkout and verify license metadata.
 - [ ] Confirm historical reference PDFs are excluded from release packages.

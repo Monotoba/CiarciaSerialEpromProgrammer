@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serial-eprom-programmer"
-version = "1.0.0"
+version = "1.0.0a1"
 description = "PySide6 GUI for reading/programming classic 27xx-series EPROMs via serial port"
 readme = "README.md"
 license = {text = "BSD-2-Clause"}
