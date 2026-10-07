@@ -7,7 +7,7 @@ name = "serial-eprom-programmer"
 version = "1.0.0"
 description = "PySide6 GUI for reading/programming classic 27xx-series EPROMs via serial port"
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "BSD-2-Clause"}
 authors = [
     {name = "Randy Morgan", email = "rmorgan62@gmail.com"}
 ]
@@ -26,12 +26,20 @@ dev = [
     "mypy>=1.5.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Monotoba/CiarciaSerialEpromProgrammer"
+Issues = "https://github.com/Monotoba/CiarciaSerialEpromProgrammer/issues"
+Documentation = "https://github.com/Monotoba/CiarciaSerialEpromProgrammer/tree/main/docs"
+
 [project.scripts]
 serial-eprom-programmer = "serial_eprom_programmer.main:main"
 
 [tool.setuptools]
-packages = ["serial_eprom_programmer"]
 package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["serial_eprom_programmer*"]
 
 [tool.setuptools.package-data]
 serial_eprom_programmer = ["py.typed"]
@@ -41,6 +49,7 @@ minversion = "7.0"
 testpaths = ["tests"]
 addopts = "-v --cov=serial_eprom_programmer --cov-report=term-missing --cov-report=html"
 python_files = ["test_*.py"]
+markers = ["qt: tests that exercise Qt widgets"]
 
 [tool.coverage.run]
 source = ["serial_eprom_programmer"]

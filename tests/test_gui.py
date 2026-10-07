@@ -146,17 +146,19 @@ class TestMainWindow:
         assert tmp_file.exists()
         assert tmp_file.read_bytes()[0] == 0xAA
 
-    def test_start_worker_guard_no_port(self, qtbot):
+    @patch("serial_eprom_programmer.gui.main_window.QMessageBox.warning")
+    def test_start_worker_guard_no_port(self, mock_warning, qtbot):
         """Test start_worker guards against missing port."""
         window = MainWindow()
         qtbot.addWidget(window)
         window.port_combo.clear()
 
-        # Should not raise, but will show message dialog
         window.start_worker("read")
         assert window.thread is None
+        mock_warning.assert_called_once_with(window, "No port", "Select a serial port first.")
 
-    def test_start_worker_invalid_base(self, qtbot):
+    @patch("serial_eprom_programmer.gui.main_window.QMessageBox.warning")
+    def test_start_worker_invalid_base(self, mock_warning, qtbot):
         """Test start_worker guards against invalid base address."""
         window = MainWindow()
         qtbot.addWidget(window)
@@ -164,8 +166,12 @@ class TestMainWindow:
 
         window.start_worker("read")
         assert window.thread is None
+        mock_warning.assert_called_once_with(
+            window, "Bad base address", "Base address must be hexadecimal."
+        )
 
-    def test_start_worker_guard_concurrent(self, qtbot):
+    @patch("serial_eprom_programmer.gui.main_window.QMessageBox.information")
+    def test_start_worker_guard_concurrent(self, mock_information, qtbot):
         """Test start_worker prevents concurrent operations."""
         window = MainWindow()
         qtbot.addWidget(window)
@@ -176,6 +182,9 @@ class TestMainWindow:
         window.start_worker("read")
         # Should not create a new thread while one is running
         assert window.thread is not None
+        mock_information.assert_called_once_with(
+            window, "Busy", "An operation is already running."
+        )
 
     def test_cleanup_worker(self, qtbot):
         """Test worker cleanup."""

@@ -52,6 +52,14 @@ class SerialEpromProgrammer:
         self.send_byte(value & 0xFF)
         self.send_byte((value >> 8) & 0xFF)
 
+    @staticmethod
+    def _validate_range(base: int, size: int) -> None:
+        """Reject invalid requests before any command reaches the hardware."""
+        if not isinstance(base, int) or not isinstance(size, int):
+            raise ValueError("Address and size must be integers")
+        if base < 0 or base > 0xFFFF or size <= 0 or base + size > 0x10000:
+            raise ValueError("Transfer must fit within the 16-bit address space")
+
     def read_eprom(self, base: int, size: int, progress=None) -> bytes:
         """Read EPROM data from hardware.
 
@@ -65,16 +73,20 @@ class SerialEpromProgrammer:
         Returns:
             Bytes read from EPROM
         """
-        self.send_byte(ord("R"))
-        self.send_word(base)
-        self.send_word(size)
-
+        self._validate_range(base, size)
         out = bytearray()
-
-        for i in range(size):
-            out.append(self.recv_byte())
-            if progress and (i % 128 == 0 or i == size - 1):
-                progress(i + 1)
+        # The documented protocol supports at most 32 KiB per command.
+        # A full 27512 transfer uses two commands, never a zero length.
+        for offset in range(0, size, 0x8000):
+            chunk_size = min(0x8000, size - offset)
+            self.send_byte(ord("R"))
+            self.send_word(base + offset)
+            self.send_word(chunk_size)
+            for i in range(chunk_size):
+                out.append(self.recv_byte())
+                completed = offset + i + 1
+                if progress and (i % 128 == 0 or completed == size):
+                    progress(completed)
 
         return bytes(out)
 
@@ -88,13 +100,15 @@ class SerialEpromProgrammer:
             data: Bytes to program
             progress: Optional callback(bytes_written) for progress updates
         """
-        self.send_byte(ord("P"))
-        self.send_word(base)
-        self.send_word(len(data))
-
-        for i, b in enumerate(data):
-            self.send_byte(b)
-            if progress and (i % 128 == 0 or i == len(data) - 1):
-                progress(i + 1)
-
-        self.serial.flush()
+        self._validate_range(base, len(data))
+        for offset in range(0, len(data), 0x8000):
+            chunk = data[offset:offset + 0x8000]
+            self.send_byte(ord("P"))
+            self.send_word(base + offset)
+            self.send_word(len(chunk))
+            for i, value in enumerate(chunk):
+                self.send_byte(value)
+                completed = offset + i + 1
+                if progress and (i % 128 == 0 or completed == len(data)):
+                    progress(completed)
+            self.serial.flush()
